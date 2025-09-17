@@ -13,15 +13,16 @@ const distPath = path.join(__dirname, "../spa");
 app.use(express.static(distPath));
 
 // Handle React Router - serve index.html for all non-API routes
-// Express 5 uses path-to-regexp v8 which no longer supports bare "*" routes.
-// Use a named splat parameter with a "*" modifier to match all paths.
-console.log('Registering catch-all routes with paths:', '/', '/:path*');
-app.get(["/", "/:path*"], (req, res) => {
-  // Don't serve index.html for API routes
-  if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
-    return res.status(404).json({ error: "API endpoint not found" });
-  }
+// Avoid path-to-regexp patterns entirely by using a middleware without a path.
+console.log('Registering catch-all middleware for SPA fallback');
+app.use((req, res, next) => {
+  // Only handle GET requests
+  if (req.method !== "GET") return next();
 
+  // Let API and health routes pass through
+  if (req.path.startsWith("/api/") || req.path === "/health") return next();
+
+  // Serve index.html for all other routes (handled by the SPA)
   res.sendFile(path.join(distPath, "index.html"));
 });
 
