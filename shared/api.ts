@@ -141,3 +141,8 @@ export interface Evenement {
   notes?: string;
   statut?: "planifie" | "confirme" | "annule";
 }
+
+// Demo API response used by the starter endpoints
+export interface DemoResponse {
+  message: string;
+}
