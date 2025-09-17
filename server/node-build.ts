@@ -15,7 +15,8 @@ app.use(express.static(distPath));
 // Handle React Router - serve index.html for all non-API routes
 // Express 5 uses path-to-regexp v8 which no longer supports bare "*" routes.
 // Use a named splat parameter with a "*" modifier to match all paths.
-app.get("/:path*", (req, res) => {
+console.log('Registering catch-all route with path:', '/:path(.*)');
+app.get("/:path(.*)", (req, res) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
     return res.status(404).json({ error: "API endpoint not found" });
