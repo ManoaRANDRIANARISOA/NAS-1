@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Builder.io (prevent accidental commits of local cache/config)
+# Local tool caches
 .builder/
 
 .config/
