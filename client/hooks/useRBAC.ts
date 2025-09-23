@@ -27,7 +27,6 @@ export const useRBAC = () => {
     ];
     const resto = [
       { label: "Plan de salle", path: "/resto/plan" },
-      { label: "Réservations", path: "/resto/reservations" },
       { label: "Menu", path: "/resto/menu" },
       { label: "Événements", path: "/resto/evenements" },
     ];
