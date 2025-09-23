@@ -311,7 +311,14 @@ function NewReservationForm() {
         <Typography fontWeight={800} mb={2}>
           Réservation — Nouveau
         </Typography>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1} sx={{ '& .MuiTextField-root': { flex: 1, minWidth: 180 }, flexWrap: 'wrap' }}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1}
+          sx={{
+            "& .MuiTextField-root": { flex: 1, minWidth: 180 },
+            flexWrap: "wrap",
+          }}
+        >
           <TextField
             size="small"
             fullWidth
@@ -338,7 +345,11 @@ function NewReservationForm() {
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={1}
-          sx={{ mt: 1, '& .MuiTextField-root': { flex: 1, minWidth: 160 }, flexWrap: 'wrap' }}
+          sx={{
+            mt: 1,
+            "& .MuiTextField-root": { flex: 1, minWidth: 160 },
+            flexWrap: "wrap",
+          }}
         >
           <TextField
             size="small"
