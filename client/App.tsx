@@ -11,7 +11,6 @@ import { store } from "@/store";
 import { AppLayout } from "@/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import RestoPlan from "@/pages/restaurant/Plan";
-import RestoReservations from "@/pages/restaurant/Reservations";
 import RestoMenu from "@/pages/restaurant/Menu";
 import RestoEvenements from "@/pages/restaurant/Evenements";
 import Placeholder from "@/components/Placeholder";
@@ -51,10 +50,6 @@ const App = () => (
               />
 
               <Route path="/resto/plan" element={<RestoPlan />} />
-              <Route
-                path="/resto/reservations"
-                element={<RestoReservations />}
-              />
               <Route path="/resto/menu" element={<RestoMenu />} />
               <Route path="/resto/evenements" element={<RestoEvenements />} />
 
