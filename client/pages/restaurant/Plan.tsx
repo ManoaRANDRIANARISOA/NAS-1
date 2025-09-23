@@ -311,21 +311,24 @@ function NewReservationForm() {
         <Typography fontWeight={800} mb={2}>
           Réservation — Nouveau
         </Typography>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1} sx={{ '& .MuiTextField-root': { flex: 1, minWidth: 180 }, flexWrap: 'wrap' }}>
           <TextField
             size="small"
+            fullWidth
             label="Nom du client"
             value={form.nom}
             onChange={(e) => setForm({ ...form, nom: e.target.value })}
           />
           <TextField
             size="small"
+            fullWidth
             label="Téléphone"
             value={form.telephone}
             onChange={(e) => setForm({ ...form, telephone: e.target.value })}
           />
           <TextField
             size="small"
+            fullWidth
             type="date"
             label="Date"
             value={form.date}
@@ -335,16 +338,18 @@ function NewReservationForm() {
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={1}
-          sx={{ mt: 1 }}
+          sx={{ mt: 1, '& .MuiTextField-root': { flex: 1, minWidth: 160 }, flexWrap: 'wrap' }}
         >
           <TextField
             size="small"
+            fullWidth
             label="Heure"
             value={form.heure}
             onChange={(e) => setForm({ ...form, heure: e.target.value })}
           />
           <TextField
             size="small"
+            fullWidth
             type="number"
             label="Couverts"
             value={form.nb}
@@ -352,7 +357,7 @@ function NewReservationForm() {
               setForm({ ...form, nb: parseInt(e.target.value || "0", 10) })
             }
           />
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
             <InputLabel>Table</InputLabel>
             <Select
               label="Table"
