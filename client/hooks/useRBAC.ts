@@ -58,9 +58,7 @@ export const useRBAC = () => {
         { label: "Hébergement", children: hebergement },
         {
           label: "Restaurant",
-          children: resto.filter((i) =>
-            ["/resto/reservations"].includes(i.path),
-          ),
+          children: resto.filter((i) => ["/resto/plan"].includes(i.path)),
         },
         { label: "Facturation", children: billing },
       ],
