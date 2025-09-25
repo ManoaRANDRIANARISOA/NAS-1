@@ -54,9 +54,9 @@ export default function Dashboard() {
   }));
   const alertsAll = [...stockAlerts, ...chambreAlerts];
 
-  const [alertFilter, setAlertFilter] = useState<
-    "all" | "stock" | "chambre"
-  >("all");
+  const [alertFilter, setAlertFilter] = useState<"all" | "stock" | "chambre">(
+    "all",
+  );
   const alerts = alertsAll.filter((a) =>
     alertFilter === "all"
       ? true
@@ -378,7 +378,9 @@ export default function Dashboard() {
             }}
           >
             <Box>
-              <Typography fontWeight={700}>R��servations hébergement</Typography>
+              <Typography fontWeight={700}>
+                R��servations hébergement
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 Calendrier et détails
               </Typography>

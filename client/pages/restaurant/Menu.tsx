@@ -184,7 +184,9 @@ export default function RestoMenu() {
     return list;
   }, [data, cat, avail, q]);
 
-  const [cart, setCart] = useState<{ id: string; nom: string; prix: number; qte: number }[]>([]);
+  const [cart, setCart] = useState<
+    { id: string; nom: string; prix: number; qte: number }[]
+  >([]);
   function addToCart(it: Item) {
     setCart((c) => {
       const i = c.findIndex((x) => x.id === it.id);
@@ -197,7 +199,13 @@ export default function RestoMenu() {
     });
   }
   function changeQte(id: string, delta: number) {
-    setCart((c) => c.map((x) => (x.id === id ? { ...x, qte: Math.max(0, x.qte + delta) } : x)).filter((x) => x.qte > 0));
+    setCart((c) =>
+      c
+        .map((x) =>
+          x.id === id ? { ...x, qte: Math.max(0, x.qte + delta) } : x,
+        )
+        .filter((x) => x.qte > 0),
+    );
   }
   const total = cart.reduce((a, b) => a + b.prix * b.qte, 0);
 
@@ -299,28 +307,55 @@ export default function RestoMenu() {
                     onClick={() => setSelectedId(i.id)}
                   />
                 </div>
-                <Button size="small" sx={{ mt: 0.5 }} variant="outlined" onClick={() => addToCart(i)}>Ajouter</Button>
+                <Button
+                  size="small"
+                  sx={{ mt: 0.5 }}
+                  variant="outlined"
+                  onClick={() => addToCart(i)}
+                >
+                  Ajouter
+                </Button>
               </Grid>
             ))}
           </Grid>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p:2, position:'sticky', top:80 }}>
-            <Typography fontWeight={800} mb={1}>Commande</Typography>
-            {cart.length===0 && <Typography color="text.secondary">Aucun article</Typography>}
-            {cart.map((c)=> (
-              <Stack key={c.id} direction="row" spacing={1} alignItems="center" sx={{ py:0.5 }}>
-                <Box sx={{ flex:1 }}>{c.nom}</Box>
+          <Paper sx={{ p: 2, position: "sticky", top: 80 }}>
+            <Typography fontWeight={800} mb={1}>
+              Commande
+            </Typography>
+            {cart.length === 0 && (
+              <Typography color="text.secondary">Aucun article</Typography>
+            )}
+            {cart.map((c) => (
+              <Stack
+                key={c.id}
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ py: 0.5 }}
+              >
+                <Box sx={{ flex: 1 }}>{c.nom}</Box>
                 <Chip size="small" label={`${c.prix.toLocaleString()} Ar`} />
-                <Button size="small" onClick={()=>changeQte(c.id,-1)}>-</Button>
+                <Button size="small" onClick={() => changeQte(c.id, -1)}>
+                  -
+                </Button>
                 <Typography>{c.qte}</Typography>
-                <Button size="small" onClick={()=>changeQte(c.id,1)}>+</Button>
+                <Button size="small" onClick={() => changeQte(c.id, 1)}>
+                  +
+                </Button>
               </Stack>
             ))}
-            <Divider sx={{ my:1 }} />
-            <Stack direction="row" justifyContent="space-between" sx={{ mb:1 }}>
+            <Divider sx={{ my: 1 }} />
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              sx={{ mb: 1 }}
+            >
               <Typography>Total</Typography>
-              <Typography fontWeight={800}>{total.toLocaleString()} Ar</Typography>
+              <Typography fontWeight={800}>
+                {total.toLocaleString()} Ar
+              </Typography>
             </Stack>
             <Stack direction="row" spacing={1}>
               <Button variant="outlined">Imprimer</Button>

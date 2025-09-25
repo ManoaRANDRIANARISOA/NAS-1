@@ -35,16 +35,24 @@ const App = () => (
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
 
-              <Route path="/hebergement/gestion" element={<GestionChambres />} />
-              <Route path="/hebergement/clients" element={<HebergementClients />} />
+              <Route
+                path="/hebergement/gestion"
+                element={<GestionChambres />}
+              />
+              <Route
+                path="/hebergement/clients"
+                element={<HebergementClients />}
+              />
               <Route path="/hebergement/stock" element={<HebergementStock />} />
-              <Route path="/hebergement/tarifs" element={<HebergementTarifs />} />
+              <Route
+                path="/hebergement/tarifs"
+                element={<HebergementTarifs />}
+              />
 
               <Route path="/resto/plan" element={<RestoPlan />} />
               <Route path="/resto/menu" element={<RestoMenu />} />
               <Route path="/resto/stock" element={<RestoStock />} />
               <Route path="/resto/evenements" element={<RestoEvenements />} />
-
 
               <Route path="/financier" element={<Financier />} />
               <Route path="/admin" element={<AdminPage />} />

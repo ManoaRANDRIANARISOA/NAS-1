@@ -50,7 +50,10 @@ export const useRBAC = () => {
       ],
       reception: [
         { label: "Hébergement", children: hebergement },
-        { label: "Restaurant", children: resto.filter((i) => ["/resto/plan"].includes(i.path)) },
+        {
+          label: "Restaurant",
+          children: resto.filter((i) => ["/resto/plan"].includes(i.path)),
+        },
         { label: "Financier", children: financier },
       ],
       chef_salle: [{ label: "Restaurant", children: resto }],
@@ -62,9 +65,7 @@ export const useRBAC = () => {
         { label: "Financier", children: financier },
       ],
       economat: [{ label: "Hébergement", children: hebergement }],
-      comptable: [
-        { label: "Financier", children: financier },
-      ],
+      comptable: [{ label: "Financier", children: financier }],
       direction: [
         { label: "Hébergement", children: hebergement },
         { label: "Restaurant", children: resto },

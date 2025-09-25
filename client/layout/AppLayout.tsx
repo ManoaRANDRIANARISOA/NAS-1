@@ -70,8 +70,7 @@ export function AppLayout({ children }: PropsWithChildren) {
 
     if (path.startsWith("/financier"))
       return <ReceiptLongIcon fontSize="small" />;
-    if (path.startsWith("/admin"))
-      return <GroupIcon fontSize="small" />;
+    if (path.startsWith("/admin")) return <GroupIcon fontSize="small" />;
     if (path.startsWith("/parametres"))
       return <SettingsIcon fontSize="small" />;
     return <DashboardIcon fontSize="small" />;
