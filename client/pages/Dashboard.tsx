@@ -148,12 +148,10 @@ export default function Dashboard() {
                 />
                 <Chip
                   size="small"
-                  label="Réservations"
-                  color={alertFilter === "reservations" ? "primary" : "default"}
-                  variant={
-                    alertFilter === "reservations" ? "filled" : "outlined"
-                  }
-                  onClick={() => setAlertFilter("reservations")}
+                  label="Chambres"
+                  color={alertFilter === "chambre" ? "primary" : "default"}
+                  variant={alertFilter === "chambre" ? "filled" : "outlined"}
+                  onClick={() => setAlertFilter("chambre")}
                 />
               </Stack>
             </Stack>
@@ -380,7 +378,7 @@ export default function Dashboard() {
             }}
           >
             <Box>
-              <Typography fontWeight={700}>Réservations hébergement</Typography>
+              <Typography fontWeight={700}>R��servations hébergement</Typography>
               <Typography variant="body2" color="text.secondary">
                 Calendrier et détails
               </Typography>
