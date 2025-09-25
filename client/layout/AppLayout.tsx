@@ -50,37 +50,27 @@ export function AppLayout({ children }: PropsWithChildren) {
   const dispatch = useAppDispatch();
 
   function iconFor(path: string) {
-    if (path.startsWith("/hebergement/planning"))
-      return <CalendarMonthIcon fontSize="small" />;
-    if (path.startsWith("/hebergement/reservations"))
+    if (path.startsWith("/hebergement/gestion"))
       return <CalendarMonthIcon fontSize="small" />;
     if (path.startsWith("/hebergement/clients"))
       return <PeopleIcon fontSize="small" />;
-    if (path.startsWith("/hebergement/linge"))
+    if (path.startsWith("/hebergement/stock"))
       return <LocalLaundryServiceIcon fontSize="small" />;
     if (path.startsWith("/hebergement/tarifs"))
       return <MonetizationOnIcon fontSize="small" />;
 
     if (path.startsWith("/resto/plan"))
       return <TableRestaurantIcon fontSize="small" />;
-    if (path.startsWith("/resto/reservations"))
-      return <EventNoteIcon fontSize="small" />;
     if (path.startsWith("/resto/menu"))
       return <RestaurantMenuIcon fontSize="small" />;
+    if (path.startsWith("/resto/stock"))
+      return <Inventory2Icon fontSize="small" />;
     if (path.startsWith("/resto/evenements"))
       return <EventIcon fontSize="small" />;
 
-    if (path.startsWith("/stock/produits"))
-      return <Inventory2Icon fontSize="small" />;
-    if (path.startsWith("/stock/mouvements"))
-      return <CompareArrowsIcon fontSize="small" />;
-    if (path.startsWith("/stock/alertes"))
-      return <WarningAmberIcon fontSize="small" />;
-
-    if (path.startsWith("/facturation"))
+    if (path.startsWith("/financier"))
       return <ReceiptLongIcon fontSize="small" />;
-    if (path.startsWith("/rapports")) return <InsightsIcon fontSize="small" />;
-    if (path.startsWith("/admin/utilisateurs"))
+    if (path.startsWith("/admin"))
       return <GroupIcon fontSize="small" />;
     if (path.startsWith("/parametres"))
       return <SettingsIcon fontSize="small" />;
