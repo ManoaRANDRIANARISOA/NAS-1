@@ -140,6 +140,7 @@ export interface Evenement {
   contact: string;
   notes?: string;
   statut?: "planifie" | "confirme" | "annule";
+  type?: "musique" | "degustation" | "anniversaire" | "conference" | "mariage" | "autre";
 }
 
 // Demo API response used by the starter endpoints
