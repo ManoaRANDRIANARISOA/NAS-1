@@ -55,14 +55,14 @@ export default function Dashboard() {
   const alertsAll = [...stockAlerts, ...chambreAlerts];
 
   const [alertFilter, setAlertFilter] = useState<
-    "all" | "stock" | "reservations"
+    "all" | "stock" | "chambre"
   >("all");
   const alerts = alertsAll.filter((a) =>
     alertFilter === "all"
       ? true
       : alertFilter === "stock"
         ? a.type === "stock"
-        : a.type === "reservations",
+        : a.type === "chambre",
   );
 
   // Week calendar (events)
