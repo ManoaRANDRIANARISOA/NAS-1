@@ -14,6 +14,13 @@ import RestoPlan from "@/pages/restaurant/Plan";
 import RestoMenu from "@/pages/restaurant/Menu";
 import RestoEvenements from "@/pages/restaurant/Evenements";
 import Placeholder from "@/components/Placeholder";
+import GestionChambres from "@/pages/hebergement/GestionChambres";
+import HebergementClients from "@/pages/hebergement/Clients";
+import HebergementStock from "@/pages/hebergement/Stock";
+import HebergementTarifs from "@/pages/hebergement/Tarifs";
+import Financier from "@/pages/Financier";
+import AdminPage from "@/pages/Admin";
+import RestoStock from "@/pages/restaurant/Stock";
 
 const queryClient = new QueryClient();
 
@@ -28,56 +35,19 @@ const App = () => (
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
 
-              <Route
-                path="/hebergement/planning"
-                element={<Placeholder title="Hébergement · Planning" />}
-              />
-              <Route
-                path="/hebergement/reservations"
-                element={<Placeholder title="Hébergement · Réservations" />}
-              />
-              <Route
-                path="/hebergement/clients"
-                element={<Placeholder title="Hébergement · Clients" />}
-              />
-              <Route
-                path="/hebergement/linge"
-                element={<Placeholder title="Hébergement · Linge" />}
-              />
-              <Route
-                path="/hebergement/tarifs"
-                element={<Placeholder title="Hébergement · Tarifs" />}
-              />
+              <Route path="/hebergement/gestion" element={<GestionChambres />} />
+              <Route path="/hebergement/clients" element={<HebergementClients />} />
+              <Route path="/hebergement/stock" element={<HebergementStock />} />
+              <Route path="/hebergement/tarifs" element={<HebergementTarifs />} />
 
               <Route path="/resto/plan" element={<RestoPlan />} />
               <Route path="/resto/menu" element={<RestoMenu />} />
+              <Route path="/resto/stock" element={<RestoStock />} />
               <Route path="/resto/evenements" element={<RestoEvenements />} />
 
-              <Route
-                path="/stock/produits"
-                element={<Placeholder title="Économat · Produits" />}
-              />
-              <Route
-                path="/stock/mouvements"
-                element={<Placeholder title="Économat · Mouvements" />}
-              />
-              <Route
-                path="/stock/alertes"
-                element={<Placeholder title="Économat · Alertes" />}
-              />
 
-              <Route
-                path="/facturation/factures"
-                element={<Placeholder title="Facturation · Factures" />}
-              />
-              <Route
-                path="/rapports"
-                element={<Placeholder title="Rapports" />}
-              />
-              <Route
-                path="/admin/utilisateurs"
-                element={<Placeholder title="Utilisateurs & Rôles" />}
-              />
+              <Route path="/financier" element={<Financier />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route
                 path="/parametres"
                 element={<Placeholder title="Paramètres" />}
