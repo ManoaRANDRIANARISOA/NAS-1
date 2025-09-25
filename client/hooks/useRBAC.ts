@@ -59,7 +59,7 @@ export const useRBAC = () => {
       bar: [{ label: "Restaurant", children: resto }],
       comptoir: [
         { label: "Restaurant", children: resto },
-        { label: "Facturation", children: billing },
+        { label: "Financier", children: financier },
       ],
       economat: [{ label: "Hébergement", children: hebergement }],
       comptable: [
