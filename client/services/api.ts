@@ -70,6 +70,43 @@ export function useRestoReservations() {
   });
 }
 
+export function useHebergementReservations() {
+  return useQuery({
+    queryKey: [...keys.reservations, "hebergement"],
+    queryFn: async () => reservations.filter((r) => r.type === "hebergement"),
+  });
+}
+
+export function useUpdateHebergementReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Partial<Reservation> & { id: string }) => {
+      const list = (await import("./mock")).reservations as any as Reservation[];
+      const i = list.findIndex((e) => e.id === payload.id);
+      if (i >= 0) list[i] = { ...list[i], ...payload };
+      return list[i];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.reservations }),
+  });
+}
+
+export function useCreateHebergementReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Omit<Reservation, "id" | "type" | "gracePeriodMinutes"> & { type?: "hebergement" }) => {
+      const r: Reservation = {
+        id: `h-${Date.now()}`,
+        type: "hebergement",
+        gracePeriodMinutes: 0,
+        ...payload,
+      } as Reservation;
+      (await import("./mock")).reservations.push(r);
+      return r;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.reservations }),
+  });
+}
+
 export function useTodayRestoReservations() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
