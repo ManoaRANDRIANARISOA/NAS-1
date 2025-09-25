@@ -183,6 +183,23 @@ export default function RestoMenu() {
     return list;
   }, [data, cat, avail, q]);
 
+  const [cart, setCart] = useState<{ id: string; nom: string; prix: number; qte: number }[]>([]);
+  function addToCart(it: Item) {
+    setCart((c) => {
+      const i = c.findIndex((x) => x.id === it.id);
+      if (i >= 0) {
+        const copy = [...c];
+        copy[i] = { ...copy[i], qte: copy[i].qte + 1 };
+        return copy;
+      }
+      return [...c, { id: it.id, nom: it.nom, prix: it.prix, qte: 1 }];
+    });
+  }
+  function changeQte(id: string, delta: number) {
+    setCart((c) => c.map((x) => (x.id === id ? { ...x, qte: Math.max(0, x.qte + delta) } : x)).filter((x) => x.qte > 0));
+  }
+  const total = cart.reduce((a, b) => a + b.prix * b.qte, 0);
+
   const [openNew, setOpenNew] = useState(false);
   const [newForm, setNewForm] = useState({
     nom: "",
