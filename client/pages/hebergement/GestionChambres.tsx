@@ -1,6 +1,6 @@
 import { Box, Button, Chip, Grid, Paper, Stack, Typography, List, ListItemButton, ListItemText, Drawer, Divider } from "@mui/material";
 import { addDays, format, startOfMonth } from "date-fns";
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { chambres, reservations } from "@/services/mock";
 import { Reservation } from "@shared/api";
 
@@ -21,8 +21,8 @@ function PlanningMensuel() {
           <Box key={d.toISOString()} sx={{ textAlign: "center", color: "text.secondary" }}>{format(d, "d")}</Box>
         ))}
         {chambres.map((c) => (
-          <>
-            <Box key={c.id} sx={{ py: 1, fontWeight: 700 }}>{c.numero}<Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">{c.categorie}</Typography></Box>
+          <Fragment key={c.id}>
+            <Box sx={{ py: 1, fontWeight: 700 }}>{c.numero}<Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">{c.categorie}</Typography></Box>
             {days.map((d, idx) => (
               <Box key={`${c.id}-${idx}`} sx={{ height: 28, borderRadius: 1, bgcolor: (() => {
                 const r = reservations.find((rr) => rr.type === 'hebergement' && rr.chambreId === c.id);
@@ -30,7 +30,7 @@ function PlanningMensuel() {
                 return cell(r, d) ? "#FCE8C7" : "transparent";
               })(), border: "1px dashed", borderColor: "divider" }} />
             ))}
-          </>
+          </Fragment>
         ))}
       </Box>
       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
@@ -79,7 +79,7 @@ export default function GestionChambres() {
               <Typography fontWeight={800}>Réservations — Liste</Typography>
               <Stack direction="row" spacing={1}>
                 <Button variant="outlined">Export</Button>
-                <Button variant="contained">Nouvelle réservation</Button>
+                <Button variant="contained">Nouvelle r��servation</Button>
               </Stack>
             </Stack>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px 120px 100px', px: 1, py: 1, color: 'text.secondary', fontWeight: 700 }}>
