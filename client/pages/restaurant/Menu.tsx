@@ -285,17 +285,48 @@ export default function RestoMenu() {
         />
       </Paper>
 
-      {/* Grid of items */}
+      {/* Grid of items + cart aside */}
       <Grid container spacing={1.5}>
-        {filtered.map((i) => (
-          <Grid key={i.id} item xs={12} sm={6} md={4} lg={3}>
-            <ItemCard
-              item={i}
-              selected={selected?.id === i.id}
-              onClick={() => setSelectedId(i.id)}
-            />
+        <Grid item xs={12} md={8}>
+          <Grid container spacing={1.5}>
+            {filtered.map((i) => (
+              <Grid key={i.id} item xs={12} sm={6} md={6} lg={4}>
+                <div onDoubleClick={() => addToCart(i)}>
+                  <ItemCard
+                    item={i}
+                    selected={selected?.id === i.id}
+                    onClick={() => setSelectedId(i.id)}
+                  />
+                </div>
+                <Button size="small" sx={{ mt: 0.5 }} variant="outlined" onClick={() => addToCart(i)}>Ajouter</Button>
+              </Grid>
+            ))}
           </Grid>
-        ))}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p:2, position:'sticky', top:80 }}>
+            <Typography fontWeight={800} mb={1}>Commande</Typography>
+            {cart.length===0 && <Typography color="text.secondary">Aucun article</Typography>}
+            {cart.map((c)=> (
+              <Stack key={c.id} direction="row" spacing={1} alignItems="center" sx={{ py:0.5 }}>
+                <Box sx={{ flex:1 }}>{c.nom}</Box>
+                <Chip size="small" label={`${c.prix.toLocaleString()} Ar`} />
+                <Button size="small" onClick={()=>changeQte(c.id,-1)}>-</Button>
+                <Typography>{c.qte}</Typography>
+                <Button size="small" onClick={()=>changeQte(c.id,1)}>+</Button>
+              </Stack>
+            ))}
+            <Divider sx={{ my:1 }} />
+            <Stack direction="row" justifyContent="space-between" sx={{ mb:1 }}>
+              <Typography>Total</Typography>
+              <Typography fontWeight={800}>{total.toLocaleString()} Ar</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined">Imprimer</Button>
+              <Button variant="contained">Générer la facture</Button>
+            </Stack>
+          </Paper>
+        </Grid>
       </Grid>
 
       {/* Details section below */}
