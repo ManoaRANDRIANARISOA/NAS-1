@@ -27,6 +27,7 @@ export const useRBAC = () => {
     const resto = [
       { label: "Plan de salle", path: "/resto/plan" },
       { label: "Menu", path: "/resto/menu" },
+      { label: "Stock", path: "/resto/stock" },
       { label: "Événements", path: "/resto/evenements" },
     ];
     const stock: any[] = [];
