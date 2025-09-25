@@ -63,8 +63,7 @@ export const useRBAC = () => {
       ],
       economat: [{ label: "Hébergement", children: hebergement }],
       comptable: [
-        { label: "Facturation", children: billing },
-        { label: "Rapports", children: rapports },
+        { label: "Financier", children: financier },
       ],
       direction: [
         { label: "Hébergement", children: hebergement },
