@@ -27,4 +27,4 @@ dist-ssr
 .builder/
 
 .config/
-!.env
+.env
