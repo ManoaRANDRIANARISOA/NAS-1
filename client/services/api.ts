@@ -27,6 +27,60 @@ export const keys = {
   events: ["events"] as const,
 };
 
+export function useStockProduits() {
+  return useQuery({
+    queryKey: keys.stock,
+    queryFn: async () => stockProduits,
+  });
+}
+
+export function useCreateStockProduit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<import("@shared/api").StockProduit, "id">,
+    ) => {
+      const created = {
+        id: `s-${Date.now()}`,
+        ...payload,
+      } as import("@shared/api").StockProduit;
+      (await import("./mock")).stockProduits.push(created);
+      return created;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.stock }),
+  });
+}
+
+export function useUpdateStockProduit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Partial<import("@shared/api").StockProduit> & { id: string },
+    ) => {
+      const list = (await import("./mock"))
+        .stockProduits as any as import("@shared/api").StockProduit[];
+      const i = list.findIndex((p) => p.id === payload.id);
+      if (i >= 0) list[i] = { ...list[i], ...payload };
+      return list[i];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.stock }),
+  });
+}
+
+export function useDeleteStockProduit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const list = (await import("./mock"))
+        .stockProduits as any as import("@shared/api").StockProduit[];
+      const i = list.findIndex((p) => p.id === id);
+      if (i >= 0) list.splice(i, 1);
+      return true;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.stock }),
+  });
+}
+
 export function useEvenements() {
   return useQuery({
     queryKey: keys.events,
@@ -67,6 +121,48 @@ export function useRestoReservations() {
   return useQuery({
     queryKey: keys.reservations,
     queryFn: async () => reservations.filter((r) => r.type === "restaurant"),
+  });
+}
+
+export function useHebergementReservations() {
+  return useQuery({
+    queryKey: [...keys.reservations, "hebergement"],
+    queryFn: async () => reservations.filter((r) => r.type === "hebergement"),
+  });
+}
+
+export function useUpdateHebergementReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Partial<Reservation> & { id: string }) => {
+      const list = (await import("./mock"))
+        .reservations as any as Reservation[];
+      const i = list.findIndex((e) => e.id === payload.id);
+      if (i >= 0) list[i] = { ...list[i], ...payload };
+      return list[i];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.reservations }),
+  });
+}
+
+export function useCreateHebergementReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<Reservation, "id" | "type" | "gracePeriodMinutes"> & {
+        type?: "hebergement";
+      },
+    ) => {
+      const r: Reservation = {
+        id: `h-${Date.now()}`,
+        type: "hebergement",
+        gracePeriodMinutes: 0,
+        ...payload,
+      } as Reservation;
+      (await import("./mock")).reservations.push(r);
+      return r;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.reservations }),
   });
 }
 
@@ -282,5 +378,37 @@ export function useAssignTable() {
       qc.invalidateQueries({ queryKey: keys.tables });
       qc.invalidateQueries({ queryKey: keys.reservations });
     },
+  });
+}
+
+export function useFactures() {
+  return useQuery({
+    queryKey: keys.factures,
+    queryFn: async () => factures,
+  });
+}
+
+export function useCreateFacture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<
+        import("@shared/api").Facture,
+        "id" | "numero" | "totalTTC"
+      > & { totalTTC?: number },
+    ) => {
+      const total =
+        payload.totalTTC ??
+        payload.lignes.reduce((s, l) => s + l.qte * l.pu, 0);
+      const created: import("@shared/api").Facture = {
+        id: `f-${Date.now()}`,
+        numero: `NAS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+        totalTTC: total,
+        ...payload,
+      };
+      (await import("./mock")).factures.push(created);
+      return created;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.factures }),
   });
 }

@@ -19,27 +19,22 @@ export const useRBAC = () => {
   const menu = useMemo(() => {
     const base = [{ label: "Dashboard", path: "/dashboard" }];
     const hebergement = [
-      { label: "Planning", path: "/hebergement/planning" },
-      { label: "Réservations", path: "/hebergement/reservations" },
+      { label: "Gestion des chambres", path: "/hebergement/gestion" },
       { label: "Clients", path: "/hebergement/clients" },
-      { label: "Linge", path: "/hebergement/linge" },
+      { label: "Stock", path: "/hebergement/stock" },
       { label: "Tarifs", path: "/hebergement/tarifs" },
     ];
     const resto = [
       { label: "Plan de salle", path: "/resto/plan" },
-      { label: "Réservations", path: "/resto/reservations" },
       { label: "Menu", path: "/resto/menu" },
+      { label: "Stock", path: "/resto/stock" },
       { label: "Événements", path: "/resto/evenements" },
     ];
-    const stock = [
-      { label: "Produits", path: "/stock/produits" },
-      { label: "Mouvements", path: "/stock/mouvements" },
-      { label: "Alertes", path: "/stock/alertes" },
-    ];
-    const billing = [{ label: "Factures", path: "/facturation/factures" }];
+    const stock: any[] = [];
+    const financier = [{ label: "Financier", path: "/financier" }];
     const rapports = [{ label: "Rapports", path: "/rapports" }];
     const admin = [
-      { label: "Utilisateurs & Rôles", path: "/admin/utilisateurs" },
+      { label: "Gestion / Admin", path: "/admin" },
       { label: "Paramètres", path: "/parametres" },
     ];
 
@@ -50,20 +45,16 @@ export const useRBAC = () => {
       admin: [
         { label: "Hébergement", children: hebergement },
         { label: "Restaurant", children: resto },
-        { label: "Économat", children: stock },
-        { label: "Facturation", children: billing },
-        { label: "Rapports", children: rapports },
+        { label: "Financier", children: financier },
         { label: "Administration", children: admin },
       ],
       reception: [
         { label: "Hébergement", children: hebergement },
         {
           label: "Restaurant",
-          children: resto.filter((i) =>
-            ["/resto/reservations"].includes(i.path),
-          ),
+          children: resto.filter((i) => ["/resto/plan"].includes(i.path)),
         },
-        { label: "Facturation", children: billing },
+        { label: "Financier", children: financier },
       ],
       chef_salle: [{ label: "Restaurant", children: resto }],
       serveur: [{ label: "Restaurant", children: resto }],
@@ -71,19 +62,14 @@ export const useRBAC = () => {
       bar: [{ label: "Restaurant", children: resto }],
       comptoir: [
         { label: "Restaurant", children: resto },
-        { label: "Facturation", children: billing },
+        { label: "Financier", children: financier },
       ],
-      economat: [{ label: "Économat", children: stock }],
-      comptable: [
-        { label: "Facturation", children: billing },
-        { label: "Rapports", children: rapports },
-      ],
+      economat: [{ label: "Hébergement", children: hebergement }],
+      comptable: [{ label: "Financier", children: financier }],
       direction: [
         { label: "Hébergement", children: hebergement },
         { label: "Restaurant", children: resto },
-        { label: "Économat", children: stock },
-        { label: "Facturation", children: billing },
-        { label: "Rapports", children: rapports },
+        { label: "Financier", children: financier },
       ],
     };
 

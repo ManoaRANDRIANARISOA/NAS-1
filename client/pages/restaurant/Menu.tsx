@@ -17,6 +17,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Divider,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -183,6 +184,31 @@ export default function RestoMenu() {
     return list;
   }, [data, cat, avail, q]);
 
+  const [cart, setCart] = useState<
+    { id: string; nom: string; prix: number; qte: number }[]
+  >([]);
+  function addToCart(it: Item) {
+    setCart((c) => {
+      const i = c.findIndex((x) => x.id === it.id);
+      if (i >= 0) {
+        const copy = [...c];
+        copy[i] = { ...copy[i], qte: copy[i].qte + 1 };
+        return copy;
+      }
+      return [...c, { id: it.id, nom: it.nom, prix: it.prix, qte: 1 }];
+    });
+  }
+  function changeQte(id: string, delta: number) {
+    setCart((c) =>
+      c
+        .map((x) =>
+          x.id === id ? { ...x, qte: Math.max(0, x.qte + delta) } : x,
+        )
+        .filter((x) => x.qte > 0),
+    );
+  }
+  const total = cart.reduce((a, b) => a + b.prix * b.qte, 0);
+
   const [openNew, setOpenNew] = useState(false);
   const [newForm, setNewForm] = useState({
     nom: "",
@@ -268,17 +294,75 @@ export default function RestoMenu() {
         />
       </Paper>
 
-      {/* Grid of items */}
+      {/* Grid of items + cart aside */}
       <Grid container spacing={1.5}>
-        {filtered.map((i) => (
-          <Grid key={i.id} item xs={12} sm={6} md={4} lg={3}>
-            <ItemCard
-              item={i}
-              selected={selected?.id === i.id}
-              onClick={() => setSelectedId(i.id)}
-            />
+        <Grid item xs={12} md={8}>
+          <Grid container spacing={1.5}>
+            {filtered.map((i) => (
+              <Grid key={i.id} item xs={12} sm={6} md={6} lg={4}>
+                <div onDoubleClick={() => addToCart(i)}>
+                  <ItemCard
+                    item={i}
+                    selected={selected?.id === i.id}
+                    onClick={() => setSelectedId(i.id)}
+                  />
+                </div>
+                <Button
+                  size="small"
+                  sx={{ mt: 0.5 }}
+                  variant="outlined"
+                  onClick={() => addToCart(i)}
+                >
+                  Ajouter
+                </Button>
+              </Grid>
+            ))}
           </Grid>
-        ))}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, position: "sticky", top: 80 }}>
+            <Typography fontWeight={800} mb={1}>
+              Commande
+            </Typography>
+            {cart.length === 0 && (
+              <Typography color="text.secondary">Aucun article</Typography>
+            )}
+            {cart.map((c) => (
+              <Stack
+                key={c.id}
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ py: 0.5 }}
+              >
+                <Box sx={{ flex: 1 }}>{c.nom}</Box>
+                <Chip size="small" label={`${c.prix.toLocaleString()} Ar`} />
+                <Button size="small" onClick={() => changeQte(c.id, -1)}>
+                  -
+                </Button>
+                <Typography>{c.qte}</Typography>
+                <Button size="small" onClick={() => changeQte(c.id, 1)}>
+                  +
+                </Button>
+              </Stack>
+            ))}
+            <Divider sx={{ my: 1 }} />
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              sx={{ mb: 1 }}
+            >
+              <Typography>Total</Typography>
+              <Typography fontWeight={800}>
+                {total.toLocaleString()} Ar
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined">Imprimer</Button>
+              <Button variant="contained">Générer la facture</Button>
+            </Stack>
+          </Paper>
+        </Grid>
       </Grid>
 
       {/* Details section below */}
