@@ -27,6 +27,55 @@ export const keys = {
   events: ["events"] as const,
 };
 
+export function useStockProduits() {
+  return useQuery({
+    queryKey: keys.stock,
+    queryFn: async () => stockProduits,
+  });
+}
+
+export function useCreateStockProduit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<import("@shared/api").StockProduit, "id">,
+    ) => {
+      const created = { id: `s-${Date.now()}`, ...payload } as import("@shared/api").StockProduit;
+      (await import("./mock")).stockProduits.push(created);
+      return created;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.stock }),
+  });
+}
+
+export function useUpdateStockProduit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Partial<import("@shared/api").StockProduit> & { id: string },
+    ) => {
+      const list = (await import("./mock")).stockProduits as any as import("@shared/api").StockProduit[];
+      const i = list.findIndex((p) => p.id === payload.id);
+      if (i >= 0) list[i] = { ...list[i], ...payload };
+      return list[i];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.stock }),
+  });
+}
+
+export function useDeleteStockProduit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const list = (await import("./mock")).stockProduits as any as import("@shared/api").StockProduit[];
+      const i = list.findIndex((p) => p.id === id);
+      if (i >= 0) list.splice(i, 1);
+      return true;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.stock }),
+  });
+}
+
 export function useEvenements() {
   return useQuery({
     queryKey: keys.events,
