@@ -370,3 +370,31 @@ export function useAssignTable() {
     },
   });
 }
+
+export function useFactures() {
+  return useQuery({
+    queryKey: keys.factures,
+    queryFn: async () => factures,
+  });
+}
+
+export function useCreateFacture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<import("@shared/api").Facture, "id" | "numero" | "totalTTC"> & { totalTTC?: number },
+    ) => {
+      const total =
+        payload.totalTTC ?? payload.lignes.reduce((s, l) => s + l.qte * l.pu, 0);
+      const created: import("@shared/api").Facture = {
+        id: `f-${Date.now()}`,
+        numero: `NAS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+        totalTTC: total,
+        ...payload,
+      };
+      (await import("./mock")).factures.push(created);
+      return created;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.factures }),
+  });
+}
