@@ -40,7 +40,10 @@ export function useCreateStockProduit() {
     mutationFn: async (
       payload: Omit<import("@shared/api").StockProduit, "id">,
     ) => {
-      const created = { id: `s-${Date.now()}`, ...payload } as import("@shared/api").StockProduit;
+      const created = {
+        id: `s-${Date.now()}`,
+        ...payload,
+      } as import("@shared/api").StockProduit;
       (await import("./mock")).stockProduits.push(created);
       return created;
     },
@@ -54,7 +57,8 @@ export function useUpdateStockProduit() {
     mutationFn: async (
       payload: Partial<import("@shared/api").StockProduit> & { id: string },
     ) => {
-      const list = (await import("./mock")).stockProduits as any as import("@shared/api").StockProduit[];
+      const list = (await import("./mock"))
+        .stockProduits as any as import("@shared/api").StockProduit[];
       const i = list.findIndex((p) => p.id === payload.id);
       if (i >= 0) list[i] = { ...list[i], ...payload };
       return list[i];
@@ -67,7 +71,8 @@ export function useDeleteStockProduit() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      const list = (await import("./mock")).stockProduits as any as import("@shared/api").StockProduit[];
+      const list = (await import("./mock"))
+        .stockProduits as any as import("@shared/api").StockProduit[];
       const i = list.findIndex((p) => p.id === id);
       if (i >= 0) list.splice(i, 1);
       return true;
@@ -130,7 +135,8 @@ export function useUpdateHebergementReservation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<Reservation> & { id: string }) => {
-      const list = (await import("./mock")).reservations as any as Reservation[];
+      const list = (await import("./mock"))
+        .reservations as any as Reservation[];
       const i = list.findIndex((e) => e.id === payload.id);
       if (i >= 0) list[i] = { ...list[i], ...payload };
       return list[i];
@@ -142,7 +148,11 @@ export function useUpdateHebergementReservation() {
 export function useCreateHebergementReservation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<Reservation, "id" | "type" | "gracePeriodMinutes"> & { type?: "hebergement" }) => {
+    mutationFn: async (
+      payload: Omit<Reservation, "id" | "type" | "gracePeriodMinutes"> & {
+        type?: "hebergement";
+      },
+    ) => {
       const r: Reservation = {
         id: `h-${Date.now()}`,
         type: "hebergement",
@@ -382,10 +392,14 @@ export function useCreateFacture() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (
-      payload: Omit<import("@shared/api").Facture, "id" | "numero" | "totalTTC"> & { totalTTC?: number },
+      payload: Omit<
+        import("@shared/api").Facture,
+        "id" | "numero" | "totalTTC"
+      > & { totalTTC?: number },
     ) => {
       const total =
-        payload.totalTTC ?? payload.lignes.reduce((s, l) => s + l.qte * l.pu, 0);
+        payload.totalTTC ??
+        payload.lignes.reduce((s, l) => s + l.qte * l.pu, 0);
       const created: import("@shared/api").Facture = {
         id: `f-${Date.now()}`,
         numero: `NAS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
