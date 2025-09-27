@@ -100,6 +100,7 @@ export const menu: MenuItem[] = Array.from({ length: 12 }).map((_, i) => ({
 }));
 
 export const reservations: Reservation[] = [
+  // Restaurant (existant)
   {
     id: "r1",
     type: "restaurant",
@@ -133,6 +134,7 @@ export const reservations: Reservation[] = [
     statut: "confirmee",
     gracePeriodMinutes: 15,
   },
+  // Hébergement (étendu)
   {
     id: "h1",
     type: "hebergement",
@@ -141,6 +143,36 @@ export const reservations: Reservation[] = [
     dateDebut: addDays(startOfToday(), 1).toISOString(),
     dateFin: addDays(startOfToday(), 3).toISOString(),
     statut: "en_attente",
+    gracePeriodMinutes: 0,
+  },
+  {
+    id: "h2",
+    type: "hebergement",
+    clientId: clients[0].id,
+    chambreId: chambres[0].id,
+    dateDebut: addDays(startOfToday(), -2).toISOString(),
+    dateFin: addDays(startOfToday(), 1).toISOString(),
+    statut: "arrivee",
+    gracePeriodMinutes: 0,
+  },
+  {
+    id: "h3",
+    type: "hebergement",
+    clientId: clients[0].id,
+    chambreId: chambres[3].id,
+    dateDebut: addDays(startOfToday(), 5).toISOString(),
+    dateFin: addDays(startOfToday(), 8).toISOString(),
+    statut: "confirmee",
+    gracePeriodMinutes: 0,
+  },
+  {
+    id: "h4",
+    type: "hebergement",
+    clientId: clients[1].id,
+    chambreId: chambres[0].id,
+    dateDebut: addDays(startOfToday(), 10).toISOString(),
+    dateFin: addDays(startOfToday(), 12).toISOString(),
+    statut: "annulee",
     gracePeriodMinutes: 0,
   },
 ];
@@ -176,33 +208,15 @@ export const commandes: Commande[] = [
 ];
 
 export const stockProduits: StockProduit[] = [
-  {
-    id: "s1",
-    nom: "Draps",
-    famille: "Hebergement",
-    sousCategorie: "linge_lit",
-    unite: "u",
-    stock: 30,
-    seuilMin: 20,
-  },
-  {
-    id: "s2",
-    nom: "Savon",
-    famille: "Hebergement",
-    sousCategorie: "entretien",
-    unite: "u",
-    stock: 10,
-    seuilMin: 15,
-  },
-  {
-    id: "s3",
-    nom: "Café",
-    famille: "Restaurant",
-    sousCategorie: "petit_dejeuner",
-    unite: "kg",
-    stock: 2,
-    seuilMin: 5,
-  },
+  // Hébergement
+  { id: "s1", nom: "Draps", famille: "Hebergement", sousCategorie: "linge_lit", unite: "u", stock: 30, seuilMin: 20 },
+  { id: "s2", nom: "Savon", famille: "Hebergement", sousCategorie: "entretien", unite: "u", stock: 10, seuilMin: 15 },
+  { id: "s4", nom: "Serviettes", famille: "Hebergement", sousCategorie: "linge_salle", unite: "u", stock: 12, seuilMin: 20 },
+  { id: "s5", nom: "Shampooing", famille: "Hebergement", sousCategorie: "entretien", unite: "u", stock: 0, seuilMin: 10 },
+  // Restaurant (sans "petit_dejeuner")
+  { id: "s6", nom: "Huile", famille: "Restaurant", sousCategorie: "cuisine", unite: "L", stock: 3, seuilMin: 5 },
+  { id: "s7", nom: "Riz", famille: "Restaurant", sousCategorie: "cuisine", unite: "kg", stock: 18, seuilMin: 15 },
+  { id: "s8", nom: "Café", famille: "Restaurant", sousCategorie: "cuisine", unite: "kg", stock: 2, seuilMin: 5 },
 ];
 
 export const factures: Facture[] = [
