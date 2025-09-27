@@ -270,11 +270,13 @@ export default function Financier() {
                     <Box>{(l.qte * l.pu).toLocaleString()} Ar</Box>
                   </Box>
                 ))}
-                <Stack alignItems="flex-end" sx={{ mt: 1 }}>
-                  <Chip
-                    label={`Total ${selected.totalTTC.toLocaleString()} Ar`}
-                    color="primary"
-                  />
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+                  <Chip label={`Total ${selected.totalTTC.toLocaleString()} Ar`} color="primary" />
+                  {selected.statut === "emisee" && (
+                    <Button variant="contained" onClick={() => update.mutate({ id: selected.id, statut: "payee" })}>
+                      Marquer comme payée
+                    </Button>
+                  )}
                 </Stack>
               </>
             )}
