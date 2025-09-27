@@ -148,17 +148,10 @@ export default function Financier() {
         <Grid item xs={12} md={9}>
           <Paper sx={{ p: 2, mb: 2 }}>
             <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
-              <Chip
-                label={`Total facturé (30j) ${ttc30.toLocaleString()} Ar`}
-              />
-              <Chip
-                label={`Payées ${payees.toLocaleString()} Ar`}
-                color="success"
-              />
-              <Chip
-                label={`En attente ${enRetard.toLocaleString()} Ar`}
-                color="warning"
-              />
+              <Chip label={`Total (30j) ${ttc30.toLocaleString()} Ar`} />
+              <Chip label={`Payées ${payees.toLocaleString()} Ar`} color="success" />
+              <Chip label={`En attente ${enRetard.toLocaleString()} Ar`} color="warning" />
+              {create.isPending && <Chip label="Enregistrement..." />}
             </Stack>
             <Box
               sx={{
