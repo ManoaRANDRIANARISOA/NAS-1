@@ -23,9 +23,10 @@ import {
 } from "recharts";
 
 const occData = [
-  { name: "101", value: 80 },
-  { name: "102", value: 65 },
-  { name: "201", value: 92 },
+  { name: "ch1", value: 80 },
+  { name: "ch2", value: 65 },
+  { name: "ch3", value: 92 },
+  { name: "ch4", value: 74 },
 ];
 const restoResa = [
   { name: "L", v: 12 },
@@ -35,11 +36,6 @@ const restoResa = [
   { name: "V", v: 20 },
   { name: "S", v: 25 },
   { name: "D", v: 14 },
-];
-const ca = [
-  { name: "Héb.", v: 12 },
-  { name: "Resto", v: 21 },
-  { name: "Évén.", v: 3.5 },
 ];
 
 function statutChip(s: Facture["statut"]) {
