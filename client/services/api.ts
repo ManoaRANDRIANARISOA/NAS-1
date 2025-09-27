@@ -412,3 +412,25 @@ export function useCreateFacture() {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.factures }),
   });
 }
+
+export function useUpdateFacture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Partial<import("@shared/api").Facture> & { id: string },
+    ) => {
+      const list = (await import("./mock")).factures as any as import("@shared/api").Facture[];
+      const i = list.findIndex((f) => f.id === payload.id);
+      if (i >= 0) list[i] = { ...list[i], ...payload };
+      return list[i];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.factures }),
+  });
+}
+
+export function useClients() {
+  return useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => (await import("./mock")).clients,
+  });
+}
