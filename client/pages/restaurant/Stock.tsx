@@ -452,11 +452,6 @@ export default function RestoStock() {
           allowedSousCats={["cuisine"]}
           famille="Restaurant"
         />
-        <Section
-          title="Petit déjeuner"
-          allowedSousCats={["petit_dejeuner"]}
-          famille="Restaurant"
-        />
       </Stack>
     </Box>
   );

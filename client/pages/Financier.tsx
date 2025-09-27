@@ -10,7 +10,11 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import { useCreateFacture, useFactures } from "@/services/api";
+import {
+  useCreateFacture,
+  useFactures,
+  useUpdateFacture,
+} from "@/services/api";
 import { Facture } from "@shared/api";
 import {
   ResponsiveContainer,
@@ -23,9 +27,10 @@ import {
 } from "recharts";
 
 const occData = [
-  { name: "101", value: 80 },
-  { name: "102", value: 65 },
-  { name: "201", value: 92 },
+  { name: "ch1", value: 80 },
+  { name: "ch2", value: 65 },
+  { name: "ch3", value: 92 },
+  { name: "ch4", value: 74 },
 ];
 const restoResa = [
   { name: "L", v: 12 },
@@ -35,11 +40,6 @@ const restoResa = [
   { name: "V", v: 20 },
   { name: "S", v: 25 },
   { name: "D", v: 14 },
-];
-const ca = [
-  { name: "Héb.", v: 12 },
-  { name: "Resto", v: 21 },
-  { name: "Évén.", v: 3.5 },
 ];
 
 function statutChip(s: Facture["statut"]) {
@@ -52,6 +52,7 @@ function statutChip(s: Facture["statut"]) {
 export default function Financier() {
   const { data: factures } = useFactures();
   const create = useCreateFacture();
+  const update = useUpdateFacture();
 
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -151,9 +152,7 @@ export default function Financier() {
         <Grid item xs={12} md={9}>
           <Paper sx={{ p: 2, mb: 2 }}>
             <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
-              <Chip
-                label={`Total facturé (30j) ${ttc30.toLocaleString()} Ar`}
-              />
+              <Chip label={`Total (30j) ${ttc30.toLocaleString()} Ar`} />
               <Chip
                 label={`Payées ${payees.toLocaleString()} Ar`}
                 color="success"
@@ -162,6 +161,7 @@ export default function Financier() {
                 label={`En attente ${enRetard.toLocaleString()} Ar`}
                 color="warning"
               />
+              {create.isPending && <Chip label="Enregistrement..." />}
             </Stack>
             <Box
               sx={{
@@ -280,11 +280,26 @@ export default function Financier() {
                     <Box>{(l.qte * l.pu).toLocaleString()} Ar</Box>
                   </Box>
                 ))}
-                <Stack alignItems="flex-end" sx={{ mt: 1 }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mt: 1 }}
+                >
                   <Chip
                     label={`Total ${selected.totalTTC.toLocaleString()} Ar`}
                     color="primary"
                   />
+                  {selected.statut === "emisee" && (
+                    <Button
+                      variant="contained"
+                      onClick={() =>
+                        update.mutate({ id: selected.id, statut: "payee" })
+                      }
+                    >
+                      Marquer comme payée
+                    </Button>
+                  )}
                 </Stack>
               </>
             )}
