@@ -419,7 +419,8 @@ export function useUpdateFacture() {
     mutationFn: async (
       payload: Partial<import("@shared/api").Facture> & { id: string },
     ) => {
-      const list = (await import("./mock")).factures as any as import("@shared/api").Facture[];
+      const list = (await import("./mock"))
+        .factures as any as import("@shared/api").Facture[];
       const i = list.findIndex((f) => f.id === payload.id);
       if (i >= 0) list[i] = { ...list[i], ...payload };
       return list[i];

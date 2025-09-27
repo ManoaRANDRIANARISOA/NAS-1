@@ -209,14 +209,70 @@ export const commandes: Commande[] = [
 
 export const stockProduits: StockProduit[] = [
   // Hébergement
-  { id: "s1", nom: "Draps", famille: "Hebergement", sousCategorie: "linge_lit", unite: "u", stock: 30, seuilMin: 20 },
-  { id: "s2", nom: "Savon", famille: "Hebergement", sousCategorie: "entretien", unite: "u", stock: 10, seuilMin: 15 },
-  { id: "s4", nom: "Serviettes", famille: "Hebergement", sousCategorie: "linge_salle", unite: "u", stock: 12, seuilMin: 20 },
-  { id: "s5", nom: "Shampooing", famille: "Hebergement", sousCategorie: "entretien", unite: "u", stock: 0, seuilMin: 10 },
+  {
+    id: "s1",
+    nom: "Draps",
+    famille: "Hebergement",
+    sousCategorie: "linge_lit",
+    unite: "u",
+    stock: 30,
+    seuilMin: 20,
+  },
+  {
+    id: "s2",
+    nom: "Savon",
+    famille: "Hebergement",
+    sousCategorie: "entretien",
+    unite: "u",
+    stock: 10,
+    seuilMin: 15,
+  },
+  {
+    id: "s4",
+    nom: "Serviettes",
+    famille: "Hebergement",
+    sousCategorie: "linge_salle",
+    unite: "u",
+    stock: 12,
+    seuilMin: 20,
+  },
+  {
+    id: "s5",
+    nom: "Shampooing",
+    famille: "Hebergement",
+    sousCategorie: "entretien",
+    unite: "u",
+    stock: 0,
+    seuilMin: 10,
+  },
   // Restaurant (sans "petit_dejeuner")
-  { id: "s6", nom: "Huile", famille: "Restaurant", sousCategorie: "cuisine", unite: "L", stock: 3, seuilMin: 5 },
-  { id: "s7", nom: "Riz", famille: "Restaurant", sousCategorie: "cuisine", unite: "kg", stock: 18, seuilMin: 15 },
-  { id: "s8", nom: "Café", famille: "Restaurant", sousCategorie: "cuisine", unite: "kg", stock: 2, seuilMin: 5 },
+  {
+    id: "s6",
+    nom: "Huile",
+    famille: "Restaurant",
+    sousCategorie: "cuisine",
+    unite: "L",
+    stock: 3,
+    seuilMin: 5,
+  },
+  {
+    id: "s7",
+    nom: "Riz",
+    famille: "Restaurant",
+    sousCategorie: "cuisine",
+    unite: "kg",
+    stock: 18,
+    seuilMin: 15,
+  },
+  {
+    id: "s8",
+    nom: "Café",
+    famille: "Restaurant",
+    sousCategorie: "cuisine",
+    unite: "kg",
+    stock: 2,
+    seuilMin: 5,
+  },
 ];
 
 export const factures: Facture[] = [

@@ -10,7 +10,11 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import { useCreateFacture, useFactures, useUpdateFacture } from "@/services/api";
+import {
+  useCreateFacture,
+  useFactures,
+  useUpdateFacture,
+} from "@/services/api";
 import { Facture } from "@shared/api";
 import {
   ResponsiveContainer,
@@ -149,8 +153,14 @@ export default function Financier() {
           <Paper sx={{ p: 2, mb: 2 }}>
             <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
               <Chip label={`Total (30j) ${ttc30.toLocaleString()} Ar`} />
-              <Chip label={`Payées ${payees.toLocaleString()} Ar`} color="success" />
-              <Chip label={`En attente ${enRetard.toLocaleString()} Ar`} color="warning" />
+              <Chip
+                label={`Payées ${payees.toLocaleString()} Ar`}
+                color="success"
+              />
+              <Chip
+                label={`En attente ${enRetard.toLocaleString()} Ar`}
+                color="warning"
+              />
               {create.isPending && <Chip label="Enregistrement..." />}
             </Stack>
             <Box
@@ -270,10 +280,23 @@ export default function Financier() {
                     <Box>{(l.qte * l.pu).toLocaleString()} Ar</Box>
                   </Box>
                 ))}
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
-                  <Chip label={`Total ${selected.totalTTC.toLocaleString()} Ar`} color="primary" />
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mt: 1 }}
+                >
+                  <Chip
+                    label={`Total ${selected.totalTTC.toLocaleString()} Ar`}
+                    color="primary"
+                  />
                   {selected.statut === "emisee" && (
-                    <Button variant="contained" onClick={() => update.mutate({ id: selected.id, statut: "payee" })}>
+                    <Button
+                      variant="contained"
+                      onClick={() =>
+                        update.mutate({ id: selected.id, statut: "payee" })
+                      }
+                    >
                       Marquer comme payée
                     </Button>
                   )}
