@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import { useCreateFacture, useFactures } from "@/services/api";
+import { useCreateFacture, useFactures, useUpdateFacture } from "@/services/api";
 import { Facture } from "@shared/api";
 import {
   ResponsiveContainer,
