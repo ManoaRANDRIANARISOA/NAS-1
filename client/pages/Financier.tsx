@@ -48,6 +48,7 @@ function statutChip(s: Facture["statut"]) {
 export default function Financier() {
   const { data: factures } = useFactures();
   const create = useCreateFacture();
+  const update = useUpdateFacture();
 
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
