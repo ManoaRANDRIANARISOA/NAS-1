@@ -171,10 +171,16 @@ export default function HebergementClients() {
                     }}
                   >
                     <Box>Hébergement</Box>
-                    <Box>{format(new Date(h.dateDebut), "dd/MM/yyyy", { locale: fr })}</Box>
+                    <Box>
+                      {format(new Date(h.dateDebut), "dd/MM/yyyy", {
+                        locale: fr,
+                      })}
+                    </Box>
                     <Box>
                       {h.dateFin
-                        ? format(new Date(h.dateFin), "dd/MM/yyyy", { locale: fr })
+                        ? format(new Date(h.dateFin), "dd/MM/yyyy", {
+                            locale: fr,
+                          })
                         : "-"}
                     </Box>
                     <Box>{h.statut}</Box>
