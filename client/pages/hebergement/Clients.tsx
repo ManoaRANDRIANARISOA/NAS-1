@@ -14,6 +14,7 @@ import {
 import { clients, reservations } from "@/services/mock";
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
 export default function HebergementClients() {
@@ -71,7 +72,7 @@ export default function HebergementClients() {
                   </Avatar>
                   <ListItemText
                     primary={c.nom}
-                    secondary={`Dernière: ${last ? format(new Date(last.dateDebut), "dd MMM yyyy") : "—"}`}
+                    secondary={`Dernière: ${last ? format(new Date(last.dateDebut), "dd MMM yyyy", { locale: fr }) : "—"}`}
                   />
                   <Chip size="small" label={type} />
                 </ListItemButton>
@@ -170,10 +171,10 @@ export default function HebergementClients() {
                     }}
                   >
                     <Box>Hébergement</Box>
-                    <Box>{format(new Date(h.dateDebut), "dd/MM/yyyy")}</Box>
+                    <Box>{format(new Date(h.dateDebut), "dd/MM/yyyy", { locale: fr })}</Box>
                     <Box>
                       {h.dateFin
-                        ? format(new Date(h.dateFin), "dd/MM/yyyy")
+                        ? format(new Date(h.dateFin), "dd/MM/yyyy", { locale: fr })
                         : "-"}
                     </Box>
                     <Box>{h.statut}</Box>
