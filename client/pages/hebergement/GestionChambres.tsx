@@ -26,6 +26,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useEffect, useState, Fragment } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { chambres as chambresData } from "@/services/mock";
@@ -205,7 +206,7 @@ function Calendar({
               key={d.toISOString()}
               sx={{ textAlign: "center", color: "text.secondary" }}
             >
-              {format(d, "EEE d")}
+              {format(d, "EEE d", { locale: fr })}
             </Box>
           ))}
           {rooms.map((c) => (
@@ -331,9 +332,9 @@ export default function GestionChambres() {
   }, [location, navigate]);
 
   function label() {
-    if (view === "month") return format(dateRef, "LLLL yyyy");
+    if (view === "month") return format(dateRef, "LLLL yyyy", { locale: fr });
     if (view === "week") return `Semaine ${getISOWeek(dateRef)}`;
-    return format(dateRef, "dd LLLL yyyy");
+    return format(dateRef, "dd LLLL yyyy", { locale: fr });
   }
 
   function handleNew() {
