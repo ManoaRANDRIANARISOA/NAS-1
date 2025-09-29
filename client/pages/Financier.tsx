@@ -161,7 +161,7 @@ export default function Financier() {
                 label={`En attente ${enRetard.toLocaleString()} Ar`}
                 color="warning"
               />
-              {create.isPending && <Chip label="Enregistrement..." />}
+              {create.isLoading && <Chip label="Enregistrement..." />}
             </Stack>
             <Box
               sx={{
