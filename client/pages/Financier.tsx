@@ -343,9 +343,14 @@ export default function Financier() {
                   Revenus par activité
                 </Typography>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={ca}>
+                  <BarChart data={(factures || []).reduce((acc: any[], f) => {
+                    const k = f.source;
+                    const i = acc.findIndex((x) => x.name === k);
+                    if (i >= 0) acc[i].v += f.totalTTC; else acc.push({ name: k, v: f.totalTTC });
+                    return acc;
+                  }, [])}>
                     <XAxis dataKey="name" />
-                    <Tooltip />
+                    <Tooltip formatter={(v: any) => `${Number(v).toLocaleString()} Ar`} />
                     <Bar dataKey="v" fill="#6E8EF5" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
