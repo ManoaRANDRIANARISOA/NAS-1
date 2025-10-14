@@ -111,234 +111,200 @@ export default function Financier() {
       <Typography variant="h4" fontWeight={800} mb={2}>
         Financier
       </Typography>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography fontWeight={700} mb={1}>
-              Filtres
-            </Typography>
-            <TextField
-              size="small"
-              placeholder="Rechercher une facture, client, réf..."
-              fullWidth
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-              <Chip size="small" label="Brouillon" variant="outlined" />
-              <Chip size="small" label="Envoyée" variant="outlined" />
-              <Chip size="small" label="Payée" variant="outlined" />
-              <Chip size="small" label="En retard" variant="outlined" />
-            </Stack>
-          </Paper>
-          <Paper sx={{ p: 2 }}>
-            <Typography fontWeight={700} mb={1}>
-              Actions rapides
-            </Typography>
-            <Stack spacing={1}>
-              <Button
-                startIcon={<Add />}
-                variant="contained"
-                onClick={() => setShowNew(true)}
-              >
-                Nouvelle facture
-              </Button>
-              <Button variant="outlined">Exporter PDF</Button>
-              <Button variant="outlined">Relancer impayés</Button>
-            </Stack>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={9}>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
-              <Chip
-                label={`Total facturé (30j) ${ttc30.toLocaleString()} Ar`}
-              />
-              <Chip
-                label={`Payées ${payees.toLocaleString()} Ar`}
-                color="success"
-              />
-              <Chip
-                label={`En attente ${enRetard.toLocaleString()} Ar`}
-                color="warning"
-              />
-            </Stack>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gap: 2,
+          mb: 2,
+        }}
+      >
+        <Paper sx={{ p: 2 }}>
+          <Typography fontWeight={700} mb={1}>
+            Filtres
+          </Typography>
+          <TextField
+            size="small"
+            placeholder="Rechercher une facture, client, réf..."
+            fullWidth
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
+            <Chip size="small" label="Brouillon" variant="outlined" />
+            <Chip size="small" label="Envoyée" variant="outlined" />
+            <Chip size="small" label="Payée" variant="outlined" />
+            <Chip size="small" label="En retard" variant="outlined" />
+          </Stack>
+        </Paper>
+        <Paper sx={{ p: 2 }}>
+          <Typography fontWeight={700} mb={1}>
+            Actions rapides
+          </Typography>
+          <Stack spacing={1}>
+            <Button
+              startIcon={<Add />}
+              variant="contained"
+              onClick={() => setShowNew(true)}
+            >
+              Nouvelle facture
+            </Button>
+            <Button variant="outlined">Exporter PDF</Button>
+            <Button variant="outlined">Relancer impayés</Button>
+          </Stack>
+        </Paper>
+      </Box>
+
+      <Stack spacing={2}>
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
+            <Chip label={`Total facturé (30j) ${ttc30.toLocaleString()} Ar`} />
+            <Chip label={`Payées ${payees.toLocaleString()} Ar`} color="success" />
+            <Chip label={`En attente ${enRetard.toLocaleString()} Ar`} color="warning" />
+          </Stack>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr 160px 140px 120px",
+              px: 1,
+              py: 1,
+              color: "text.secondary",
+              fontWeight: 700,
+            }}
+          >
+            <Box>Facture</Box>
+            <Box>Date</Box>
+            <Box>Montant</Box>
+            <Box>Statut</Box>
+          </Box>
+          {list.map((f) => (
             <Box
+              key={f.id}
+              onClick={() => setSelectedId(f.id)}
               sx={{
+                cursor: "pointer",
                 display: "grid",
                 gridTemplateColumns: "1fr 160px 140px 120px",
                 px: 1,
                 py: 1,
-                color: "text.secondary",
-                fontWeight: 700,
+                borderTop: "1px solid",
+                borderColor: "divider",
+                alignItems: "center",
+                bgcolor: selected?.id === f.id ? "action.hover" : undefined,
               }}
             >
-              <Box>Facture</Box>
-              <Box>Date</Box>
-              <Box>Montant</Box>
-              <Box>Statut</Box>
+              <Box>
+                <Typography fontWeight={700}>{f.numero}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {f.clientNom} · {f.source}
+                </Typography>
+              </Box>
+              <Box>{new Date(f.date).toLocaleDateString()}</Box>
+              <Box>{f.totalTTC.toLocaleString()} Ar</Box>
+              <Box>{statutChip(f.statut)}</Box>
             </Box>
-            {list.map((f) => (
+          ))}
+        </Paper>
+
+        <Paper sx={{ p: 2 }}>
+          <Typography fontWeight={700} mb={1}>
+            Détail facture sélectionnée
+          </Typography>
+          {!selected && (
+            <Typography color="text.secondary">Sélectionnez une facture</Typography>
+          )}
+          {selected && (
+            <>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 1 }}>
+                <TextField size="small" label="Numéro" value={selected.numero} InputProps={{ readOnly: true }} />
+                <TextField size="small" label="Date" value={new Date(selected.date).toLocaleDateString()} InputProps={{ readOnly: true }} />
+                <TextField size="small" label="Client" value={selected.clientNom} InputProps={{ readOnly: true }} />
+                <TextField size="small" label="Source" value={selected.source} InputProps={{ readOnly: true }} />
+              </Stack>
               <Box
-                key={f.id}
-                onClick={() => setSelectedId(f.id)}
                 sx={{
-                  cursor: "pointer",
                   display: "grid",
-                  gridTemplateColumns: "1fr 160px 140px 120px",
+                  gridTemplateColumns: "1fr 80px 100px 120px",
                   px: 1,
                   py: 1,
-                  borderTop: "1px solid",
-                  borderColor: "divider",
-                  alignItems: "center",
-                  bgcolor: selected?.id === f.id ? "action.hover" : undefined,
+                  color: "text.secondary",
+                  fontWeight: 700,
                 }}
               >
-                <Box>
-                  <Typography fontWeight={700}>{f.numero}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {f.clientNom} · {f.source}
-                  </Typography>
-                </Box>
-                <Box>{new Date(f.date).toLocaleDateString()}</Box>
-                <Box>{f.totalTTC.toLocaleString()} Ar</Box>
-                <Box>{statutChip(f.statut)}</Box>
+                <Box>Article</Box>
+                <Box>Qté</Box>
+                <Box>Prix</Box>
+                <Box>Total</Box>
               </Box>
-            ))}
-          </Paper>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography fontWeight={700} mb={1}>
-              Détail facture sélectionnée
-            </Typography>
-            {!selected && (
-              <Typography color="text.secondary">
-                Sélectionnez une facture
-              </Typography>
-            )}
-            {selected && (
-              <>
-                <Stack
-                  direction={{ xs: "column", md: "row" }}
-                  spacing={2}
-                  sx={{ mb: 1 }}
-                >
-                  <TextField
-                    size="small"
-                    label="Numéro"
-                    value={selected.numero}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Date"
-                    value={new Date(selected.date).toLocaleDateString()}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Client"
-                    value={selected.clientNom}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Source"
-                    value={selected.source}
-                    InputProps={{ readOnly: true }}
-                  />
-                </Stack>
+              {selected.lignes.map((l, i) => (
                 <Box
+                  key={i}
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "1fr 80px 100px 120px",
                     px: 1,
                     py: 1,
-                    color: "text.secondary",
-                    fontWeight: 700,
+                    borderTop: "1px solid",
+                    borderColor: "divider",
                   }}
                 >
-                  <Box>Article</Box>
-                  <Box>Qté</Box>
-                  <Box>Prix</Box>
-                  <Box>Total</Box>
+                  <Box>{l.description}</Box>
+                  <Box>{l.qte}</Box>
+                  <Box>{l.pu.toLocaleString()} Ar</Box>
+                  <Box>{(l.qte * l.pu).toLocaleString()} Ar</Box>
                 </Box>
-                {selected.lignes.map((l, i) => (
-                  <Box
-                    key={i}
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 80px 100px 120px",
-                      px: 1,
-                      py: 1,
-                      borderTop: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  >
-                    <Box>{l.description}</Box>
-                    <Box>{l.qte}</Box>
-                    <Box>{l.pu.toLocaleString()} Ar</Box>
-                    <Box>{(l.qte * l.pu).toLocaleString()} Ar</Box>
-                  </Box>
-                ))}
-                <Stack alignItems="flex-end" sx={{ mt: 1 }}>
-                  <Chip
-                    label={`Total ${selected.totalTTC.toLocaleString()} Ar`}
-                    color="primary"
-                  />
-                </Stack>
-              </>
-            )}
-          </Paper>
-          <Paper sx={{ p: 2 }}>
-            <Typography fontWeight={700} mb={1}>
-              Rapports
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Réservations resto (7j)
-                </Typography>
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={restoResa}>
-                    <XAxis dataKey="name" />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="v"
-                      stroke="#6E8EF5"
-                      strokeWidth={3}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Taux d’occupation par chambre
-                </Typography>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={occData}>
-                    <XAxis dataKey="name" />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#81C784" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary">
-                  Revenus par activité
-                </Typography>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={ca}>
-                    <XAxis dataKey="name" />
-                    <Tooltip />
-                    <Bar dataKey="v" fill="#6E8EF5" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Grid>
+              ))}
+              <Stack alignItems="flex-end" sx={{ mt: 1 }}>
+                <Chip label={`Total ${selected.totalTTC.toLocaleString()} Ar`} color="primary" />
+              </Stack>
+            </>
+          )}
+        </Paper>
+
+        <Paper sx={{ p: 2 }}>
+          <Typography fontWeight={700} mb={1}>
+            Rapports
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" color="text.secondary">
+                Réservations resto (7j)
+              </Typography>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={restoResa}>
+                  <XAxis dataKey="name" />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="v" stroke="#6E8EF5" strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
             </Grid>
-          </Paper>
-        </Grid>
-      </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" color="text.secondary">
+                Taux d’occupation par chambre
+              </Typography>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={occData}>
+                  <XAxis dataKey="name" />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#81C784" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Revenus par activité
+              </Typography>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={ca}>
+                  <XAxis dataKey="name" />
+                  <Tooltip />
+                  <Bar dataKey="v" fill="#6E8EF5" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Stack>
 
       {showNew && (
         <Paper
