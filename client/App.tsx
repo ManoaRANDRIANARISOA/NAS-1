@@ -9,6 +9,8 @@ import { theme } from "@/theme/mui";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 import { AppLayout } from "@/layout/AppLayout";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import RestoPlan from "@/pages/restaurant/Plan";
 import RestoMenu from "@/pages/restaurant/Menu";
@@ -24,16 +26,19 @@ import RestoStock from "@/pages/restaurant/Stock";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <Provider store={store}>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <BrowserRouter>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+function AuthenticatedApp() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return (
+    <BrowserRouter>
+      <AppLayout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
               <Route
                 path="/hebergement/gestion"
@@ -61,10 +66,21 @@ const App = () => (
                 element={<Placeholder title="Paramètres" />}
               />
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
-        </BrowserRouter>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AppLayout>
+    </BrowserRouter>
+  );
+}
+
+const App = () => (
+  <Provider store={store}>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <AuthenticatedApp />
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   </Provider>

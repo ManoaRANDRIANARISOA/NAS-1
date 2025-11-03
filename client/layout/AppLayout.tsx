@@ -7,7 +7,6 @@ import {
   Divider,
   Drawer,
   IconButton,
-  InputBase,
   List,
   ListItemButton,
   ListItemText,
@@ -20,27 +19,23 @@ import {
   ListItemIcon,
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import DownloadIcon from "@mui/icons-material/Download";
-import SearchIcon from "@mui/icons-material/Search";
+import LogoutIcon from "@mui/icons-material/Logout";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PeopleIcon from "@mui/icons-material/People";
 import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
-import EventNoteIcon from "@mui/icons-material/EventNote";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import EventIcon from "@mui/icons-material/Event";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import InsightsIcon from "@mui/icons-material/Insights";
 import GroupIcon from "@mui/icons-material/Group";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Link, useLocation } from "react-router-dom";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAppDispatch, setRole } from "@/store";
+import { useAuth } from "@/contexts/AuthContext";
 
 const drawerWidth = 280;
 
@@ -48,6 +43,7 @@ export function AppLayout({ children }: PropsWithChildren) {
   const { menu, role } = useRBAC();
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const { logout } = useAuth();
 
   function iconFor(path: string) {
     if (path.startsWith("/hebergement/gestion"))
@@ -87,32 +83,21 @@ export function AppLayout({ children }: PropsWithChildren) {
           <Typography variant="h6" fontWeight={800} sx={{ mr: 3 }}>
             NAS CONNECT
           </Typography>
-          <Box
-            sx={{
-              bgcolor: "background.paper",
-              borderRadius: 2,
-              px: 1.5,
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              width: 420,
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <SearchIcon fontSize="small" />
-            <InputBase placeholder="Rechercher..." sx={{ flex: 1 }} />
-          </Box>
           <Box sx={{ flex: 1 }} />
-          <Button startIcon={<DownloadIcon />} variant="outlined">
-            Télécharger
-          </Button>
           <IconButton sx={{ ml: 1 }} color="inherit">
             <Badge color="error" variant="dot">
               <NotificationsIcon />
             </Badge>
           </IconButton>
           <RoleSwitcher onChange={(r) => dispatch(setRole(r))} value={role} />
+          <IconButton
+            onClick={logout}
+            color="inherit"
+            sx={{ ml: 1 }}
+            title="Déconnexion"
+          >
+            <LogoutIcon />
+          </IconButton>
           <Avatar sx={{ ml: 2, width: 36, height: 36 }}>NE</Avatar>
         </Toolbar>
       </AppBar>

@@ -52,8 +52,7 @@ export default function Index() {
           Generating your app...
         </h1>
         <p className="mt-4 text-slate-600 max-w-md">
-          Watch the chat on the left for updates that might need your attention
-          to finish generating
+          loading
         </p>
         <p className="mt-4 hidden max-w-md">{exampleFromServer}</p>
       </div>

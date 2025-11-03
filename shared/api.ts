@@ -5,6 +5,11 @@ export interface Client {
   nom: string;
   telephone: string;
   email?: string;
+  adresse?: string;
+  pays?: string;
+  type?: string;
+  tags?: string;
+  reference?: string;
   preferences_alimentaires?: string;
 }
 

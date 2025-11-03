@@ -449,8 +449,8 @@ export default function HebergementStock() {
           />
         </Paper>
         <Section
-          title="Linge"
-          allowedSousCats={["linge_lit", "linge_salle"]}
+          title="Service linge"
+          allowedSousCats={["linge_lit", "linge_salle", "entretien"]}
           famille="Hebergement"
         />
         <Section

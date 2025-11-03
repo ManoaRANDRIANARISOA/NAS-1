@@ -30,3 +30,42 @@ Commands:
 •  Aliases: @ -> ./client, @shared -> ./shared.
 
 •  Linting: ESLint not configured; rely on typecheck and Prettier.
+
+
+
+
+
+📋 Structure du Projet
+Architecture Full-Stack :
+
+✅ Frontend : React 18 + TypeScript + Vite + TailwindCSS 3
+✅ Backend : Express intégré avec Vite dev server
+✅ State Management : Redux Toolkit (@reduxjs/toolkit)
+✅ Data Fetching : Tanstack Query (React Query)
+✅ UI Components : Radix UI + MUI v6 (Material-UI) avec Emotion
+✅ Routing : React Router v6 (mode SPA)
+✅ Icons : Lucide React
+✅ Package Manager : pnpm
+🎨 Système de Thème
+TailwindCSS 3 avec variables CSS HSL dans global.css
+MUI Theme personnalisé dans client/theme/mui.ts
+Dark mode supporté avec classe .dark
+Palette de couleurs : Bleu pastel (primary), Vert pastel (secondary)
+🗂️ Organisation du Code
+Client :
+
+pages/ - Routes de l'application (Dashboard, Restaurant, Hébergement, etc.)
+components/ui/ - Bibliothèque de composants réutilisables (Radix UI)
+layout/ - Layout principal (AppLayout)
+contexts/ - AuthContext pour l'authentification
+store/ - Redux store
+services/ - API et mock data
+hooks/ - Custom hooks (useRBAC)
+Fonctionnalités Actuelles :
+
+🔐 Authentification (AuthContext)
+📊 Dashboard
+🍽️ Gestion Restaurant (Plan, Menu, Stock, Événements)
+🏨 Gestion Hébergement (Chambres, Clients, Stock, Tarifs)
+💰 Module Financier
+⚙️ Administration

@@ -3,15 +3,42 @@ import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-const users = [
+type User = {
+  id: string;
+  nom: string;
+  email: string;
+  role: string;
+  canal: string;
+  derniere: string;
+  statut: "Actif" | "Invité" | "Suspendu";
+};
+
+type Role = {
+  id: string;
+  nom: string;
+  utilisateurs: number;
+  hebergement: "Total" | "Modif." | "Lecture" | "Aucun";
+  restaurant: "Total" | "Modif." | "Lecture" | "Aucun";
+  stock: "Total" | "Modif." | "Lecture" | "Aucun";
+  facturation: "Total" | "Modif." | "Lecture" | "Création" | "Aucun";
+  rapports: "Total" | "Lecture" | "Aucun";
+};
+
+const initialUsers: User[] = [
   {
     id: "u1",
     nom: "Rina Andriamalala",
@@ -50,64 +77,174 @@ const users = [
   },
 ];
 
-const roles = [
+const initialRoles: Omit<Role, "utilisateurs">[] = [
   {
     id: "r1",
     nom: "Admin",
-    utilisateurs: 4,
     hebergement: "Total",
     restaurant: "Total",
+    stock: "Total",
     facturation: "Total",
+    rapports: "Total",
   },
   {
     id: "r2",
     nom: "Manager",
-    utilisateurs: 6,
     hebergement: "Modif.",
     restaurant: "Modif.",
+    stock: "Modif.",
     facturation: "Lecture",
+    rapports: "Lecture",
   },
   {
     id: "r3",
     nom: "Serveur",
-    utilisateurs: 8,
     hebergement: "Aucun",
-    restaurant: "Lecture",
+    restaurant: "Modif.",
+    stock: "Lecture",
     facturation: "Aucun",
+    rapports: "Aucun",
   },
   {
     id: "r4",
     nom: "Réception",
-    utilisateurs: 6,
-    hebergement: "Lecture",
+    hebergement: "Modif.",
     restaurant: "Aucun",
+    stock: "Lecture",
     facturation: "Création",
+    rapports: "Lecture",
   },
 ];
 
 export default function AdminPage() {
-  const [selectedRole, setSelectedRole] = useState("Manager");
-  const [perm, setPerm] = useState({
-    hebergement: true,
-    restaurant: true,
-    stock: true,
-    facturation: true,
-    rapports: true,
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [roles, setRoles] = useState<Omit<Role, "utilisateurs">[]>(initialRoles);
+  
+  // Filtres
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "Actif" | "Invité" | "Suspendu">("all");
+  
+  // Modal de gestion utilisateur
+  const [modalOpen, setModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userForm, setUserForm] = useState<User>({
+    id: "",
+    nom: "",
+    email: "",
+    role: "Serveur",
+    canal: "Restaurant",
+    derniere: "",
+    statut: "Actif",
   });
+
+  // Filtrage des utilisateurs
+  const filteredUsers = useMemo(() => {
+    let filtered = users;
+    
+    // Filtre par recherche
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (u) =>
+          u.nom.toLowerCase().includes(query) ||
+          u.email.toLowerCase().includes(query) ||
+          u.role.toLowerCase().includes(query) ||
+          u.canal.toLowerCase().includes(query)
+      );
+    }
+    
+    // Filtre par statut
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((u) => u.statut === statusFilter);
+    }
+    
+    return filtered;
+  }, [users, searchQuery, statusFilter]);
+
+  // Ouvrir le modal pour créer un utilisateur
+  function openCreateModal() {
+    setIsCreating(true);
+    setEditingUser(null);
+    setUserForm({
+      id: "",
+      nom: "",
+      email: "",
+      role: "Serveur",
+      canal: "Restaurant",
+      derniere: "",
+      statut: "Actif",
+    });
+    setModalOpen(true);
+  }
+
+  // Ouvrir le modal d'édition
+  function openEditModal(user: User) {
+    setIsCreating(false);
+    setEditingUser(user);
+    setUserForm({ ...user });
+    setModalOpen(true);
+  }
+
+  // Sauvegarder les modifications ou créer un nouvel utilisateur
+  function saveUser() {
+    if (isCreating) {
+      // Créer un nouvel utilisateur
+      const newUser: User = {
+        ...userForm,
+        id: `u${Date.now()}`,
+        derniere: "",
+      };
+      setUsers((prev) => [...prev, newUser]);
+    } else {
+      // Modifier un utilisateur existant
+      if (!editingUser) return;
+      setUsers((prev) =>
+        prev.map((u) => (u.id === editingUser.id ? { ...userForm } : u))
+      );
+    }
+    
+    setModalOpen(false);
+    setEditingUser(null);
+    setIsCreating(false);
+  }
+
+  // Supprimer un utilisateur
+  function deleteUser(userId: string) {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    }
+  }
+
+  // Calculer le nombre d'utilisateurs par rôle
+  const rolesWithUserCount = useMemo(() => {
+    return roles.map((role) => ({
+      ...role,
+      utilisateurs: users.filter((u) => u.role === role.nom).length,
+    }));
+  }, [roles, users]);
+
+  // Mettre à jour un rôle
+  function updateRolePermission(
+    roleId: string,
+    field: keyof Omit<Role, "id" | "nom" | "utilisateurs">,
+    value: string
+  ) {
+    setRoles((prev) =>
+      prev.map((r) =>
+        r.id === roleId ? { ...r, [field]: value } : r
+      )
+    );
+  }
 
   return (
     <Box>
       <Typography variant="h4" fontWeight={800} mb={2}>
         Utilisateurs & Rôles
       </Typography>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 2,
-          mb: 2,
-        }}
-      >
+      
+      {/* Filtres */}
+      <Box sx={{ mb: 2 }}>
         <Paper sx={{ p: 2 }}>
           <Typography fontWeight={700} mb={1}>
             Filtres
@@ -116,22 +253,38 @@ export default function AdminPage() {
             size="small"
             placeholder="Rechercher un utilisateur, un rôle..."
             fullWidth
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-            <Chip size="small" label="Tous" variant="outlined" />
-            <Chip size="small" label="Actifs" variant="outlined" />
-            <Chip size="small" label="Invités" variant="outlined" />
-            <Chip size="small" label="Suspendus" variant="outlined" />
-          </Stack>
-        </Paper>
-        <Paper sx={{ p: 2 }}>
-          <Typography fontWeight={700} mb={1}>
-            Rôles rapides
-          </Typography>
-          <Stack spacing={1}>
-            <Button variant="outlined">Administrateur</Button>
-            <Button variant="outlined">Réception</Button>
-            <Button variant="outlined">Serveur</Button>
+          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", gap: 1 }}>
+            <Chip
+              size="small"
+              label="Tous"
+              variant={statusFilter === "all" ? "filled" : "outlined"}
+              color={statusFilter === "all" ? "primary" : "default"}
+              onClick={() => setStatusFilter("all")}
+            />
+            <Chip
+              size="small"
+              label="Actifs"
+              variant={statusFilter === "Actif" ? "filled" : "outlined"}
+              color={statusFilter === "Actif" ? "primary" : "default"}
+              onClick={() => setStatusFilter("Actif")}
+            />
+            <Chip
+              size="small"
+              label="Invités"
+              variant={statusFilter === "Invité" ? "filled" : "outlined"}
+              color={statusFilter === "Invité" ? "primary" : "default"}
+              onClick={() => setStatusFilter("Invité")}
+            />
+            <Chip
+              size="small"
+              label="Suspendus"
+              variant={statusFilter === "Suspendu" ? "filled" : "outlined"}
+              color={statusFilter === "Suspendu" ? "primary" : "default"}
+              onClick={() => setStatusFilter("Suspendu")}
+            />
           </Stack>
         </Paper>
       </Box>
@@ -142,9 +295,12 @@ export default function AdminPage() {
           <Chip label="Invitations en attente 3" />
           <Chip label="Dernière connexion il y a 2 h" />
           <Box sx={{ flex: 1 }} />
-          <Button startIcon={<Add />} variant="contained">Nouvel utilisateur</Button>
+          <Button startIcon={<Add />} variant="contained" onClick={openCreateModal}>
+            Nouvel utilisateur
+          </Button>
         </Stack>
 
+        {/* Liste des utilisateurs */}
         <Paper sx={{ p: 2 }}>
           <Typography fontWeight={700} mb={1}>
             Utilisateurs
@@ -166,7 +322,7 @@ export default function AdminPage() {
             <Box>Statut</Box>
             <Box>Actions</Box>
           </Box>
-          {users.map((u) => (
+          {filteredUsers.map((u) => (
             <Box
               key={u.id}
               sx={{
@@ -202,80 +358,223 @@ export default function AdminPage() {
                 />
               </Box>
               <Box>
-                <Button size="small">Gérer</Button>
+                <Stack direction="row" spacing={0.5}>
+                  <Button size="small" onClick={() => openEditModal(u)}>
+                    Gérer
+                  </Button>
+                  <Button 
+                    size="small" 
+                    color="error" 
+                    onClick={() => deleteUser(u.id)}
+                  >
+                    Suppr.
+                  </Button>
+                </Stack>
               </Box>
             </Box>
           ))}
         </Paper>
 
+        {/* Tableau des rôles avec permissions modifiables */}
         <Paper sx={{ p: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography fontWeight={700}>Permissions du rôle sélectionné</Typography>
-            <Stack direction="row" spacing={1}>
-              <TextField size="small" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} />
-              <Button variant="contained">Enregistrer</Button>
-            </Stack>
-          </Stack>
+          <Typography fontWeight={700} mb={1}>
+            Rôles et permissions
+          </Typography>
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "1fr 100px",
-              rowGap: 1,
-              columnGap: 2,
-            }}
-          >
-            <Typography>Accès hébergement</Typography>
-            <Switch checked={perm.hebergement} onChange={(e) => setPerm((p) => ({ ...p, hebergement: e.target.checked }))} />
-            <Typography>Accès restaurant</Typography>
-            <Switch checked={perm.restaurant} onChange={(e) => setPerm((p) => ({ ...p, restaurant: e.target.checked }))} />
-            <Typography>Gestion des stocks</Typography>
-            <Switch checked={perm.stock} onChange={(e) => setPerm((p) => ({ ...p, stock: e.target.checked }))} />
-            <Typography>Facturation</Typography>
-            <Switch checked={perm.facturation} onChange={(e) => setPerm((p) => ({ ...p, facturation: e.target.checked }))} />
-            <Typography>Rapports</Typography>
-            <Switch checked={perm.rapports} onChange={(e) => setPerm((p) => ({ ...p, rapports: e.target.checked }))} />
-          </Box>
-        </Paper>
-
-        <Paper sx={{ p: 2 }}>
-          <Typography fontWeight={700} mb={1}>Rôles</Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 120px 120px 120px 120px",
+              gridTemplateColumns: "1fr 100px 120px 120px 120px 120px 120px",
               px: 1,
               py: 1,
               color: "text.secondary",
               fontWeight: 700,
+              fontSize: "0.875rem",
             }}
           >
             <Box>Nom du rôle</Box>
             <Box>Utilisateurs</Box>
             <Box>Hébergement</Box>
             <Box>Restaurant</Box>
+            <Box>Stocks</Box>
             <Box>Facturation</Box>
+            <Box>Rapports</Box>
           </Box>
-          {roles.map((r) => (
+          {rolesWithUserCount.map((r) => (
             <Box
               key={r.id}
               sx={{
                 display: "grid",
-                gridTemplateColumns: "1fr 120px 120px 120px 120px",
+                gridTemplateColumns: "1fr 100px 120px 120px 120px 120px 120px",
                 px: 1,
                 py: 1,
                 borderTop: "1px solid",
                 borderColor: "divider",
+                alignItems: "center",
               }}
             >
-              <Box>{r.nom}</Box>
+              <Box fontWeight={700}>{r.nom}</Box>
               <Box>{r.utilisateurs}</Box>
-              <Box>{r.hebergement}</Box>
-              <Box>{r.restaurant}</Box>
-              <Box>{r.facturation}</Box>
+              <Box>
+                <Select
+                  size="small"
+                  value={r.hebergement}
+                  onChange={(e) =>
+                    updateRolePermission(r.id, "hebergement", e.target.value)
+                  }
+                  sx={{ minWidth: 100 }}
+                >
+                  <MenuItem value="Total">Total</MenuItem>
+                  <MenuItem value="Modif.">Modif.</MenuItem>
+                  <MenuItem value="Lecture">Lecture</MenuItem>
+                  <MenuItem value="Aucun">Aucun</MenuItem>
+                </Select>
+              </Box>
+              <Box>
+                <Select
+                  size="small"
+                  value={r.restaurant}
+                  onChange={(e) =>
+                    updateRolePermission(r.id, "restaurant", e.target.value)
+                  }
+                  sx={{ minWidth: 100 }}
+                >
+                  <MenuItem value="Total">Total</MenuItem>
+                  <MenuItem value="Modif.">Modif.</MenuItem>
+                  <MenuItem value="Lecture">Lecture</MenuItem>
+                  <MenuItem value="Aucun">Aucun</MenuItem>
+                </Select>
+              </Box>
+              <Box>
+                <Select
+                  size="small"
+                  value={r.stock}
+                  onChange={(e) =>
+                    updateRolePermission(r.id, "stock", e.target.value)
+                  }
+                  sx={{ minWidth: 100 }}
+                >
+                  <MenuItem value="Total">Total</MenuItem>
+                  <MenuItem value="Modif.">Modif.</MenuItem>
+                  <MenuItem value="Lecture">Lecture</MenuItem>
+                  <MenuItem value="Aucun">Aucun</MenuItem>
+                </Select>
+              </Box>
+              <Box>
+                <Select
+                  size="small"
+                  value={r.facturation}
+                  onChange={(e) =>
+                    updateRolePermission(r.id, "facturation", e.target.value)
+                  }
+                  sx={{ minWidth: 100 }}
+                >
+                  <MenuItem value="Total">Total</MenuItem>
+                  <MenuItem value="Modif.">Modif.</MenuItem>
+                  <MenuItem value="Création">Création</MenuItem>
+                  <MenuItem value="Lecture">Lecture</MenuItem>
+                  <MenuItem value="Aucun">Aucun</MenuItem>
+                </Select>
+              </Box>
+              <Box>
+                <Select
+                  size="small"
+                  value={r.rapports}
+                  onChange={(e) =>
+                    updateRolePermission(r.id, "rapports", e.target.value)
+                  }
+                  sx={{ minWidth: 100 }}
+                >
+                  <MenuItem value="Total">Total</MenuItem>
+                  <MenuItem value="Lecture">Lecture</MenuItem>
+                  <MenuItem value="Aucun">Aucun</MenuItem>
+                </Select>
+              </Box>
             </Box>
           ))}
         </Paper>
       </Stack>
+
+      {/* Modal de création/édition utilisateur */}
+      <Dialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {isCreating ? "Nouvel utilisateur" : "Gérer l'utilisateur"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Nom complet"
+              value={userForm.nom}
+              onChange={(e) =>
+                setUserForm((f) => ({ ...f, nom: e.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={userForm.email}
+              onChange={(e) =>
+                setUserForm((f) => ({ ...f, email: e.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Rôle"
+              select
+              value={userForm.role}
+              onChange={(e) =>
+                setUserForm((f) => ({ ...f, role: e.target.value }))
+              }
+              fullWidth
+            >
+              <MenuItem value="Admin">Admin</MenuItem>
+              <MenuItem value="Manager">Manager</MenuItem>
+              <MenuItem value="Serveur">Serveur</MenuItem>
+              <MenuItem value="Réception">Réception</MenuItem>
+            </TextField>
+            <TextField
+              label="Canal"
+              select
+              value={userForm.canal}
+              onChange={(e) =>
+                setUserForm((f) => ({ ...f, canal: e.target.value }))
+              }
+              fullWidth
+            >
+              <MenuItem value="Tous">Tous</MenuItem>
+              <MenuItem value="Hébergement">Hébergement</MenuItem>
+              <MenuItem value="Restaurant">Restaurant</MenuItem>
+            </TextField>
+            <TextField
+              label="Statut"
+              select
+              value={userForm.statut}
+              onChange={(e) =>
+                setUserForm((f) => ({
+                  ...f,
+                  statut: e.target.value as User["statut"],
+                }))
+              }
+              fullWidth
+            >
+              <MenuItem value="Actif">Actif</MenuItem>
+              <MenuItem value="Invité">Invité</MenuItem>
+              <MenuItem value="Suspendu">Suspendu</MenuItem>
+            </TextField>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModalOpen(false)}>Annuler</Button>
+          <Button variant="contained" onClick={saveUser}>
+            {isCreating ? "Créer" : "Enregistrer"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

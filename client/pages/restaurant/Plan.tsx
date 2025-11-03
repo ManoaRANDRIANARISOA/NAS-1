@@ -12,20 +12,29 @@ import {
   Stack,
   TextField,
   Typography,
+  Card,
+  CardContent,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import RestaurantIcon from "@mui/icons-material/Restaurant";
+import { useMemo, useState, useEffect } from "react";
 import {
   useTables,
   useEndOfService,
   useTodayRestoReservations,
   useCreateClient,
   useCreateRestoReservation,
+  useUpdateRestoReservation,
+  useDeleteRestoReservation,
+  useClients,
 } from "@/services/api";
 import { Reservation, TableResto } from "@shared/api";
 import { TableStatus } from "@/components/StatusChip";
 import AssignTableDialog from "@/components/AssignTableDialog";
 import CommandesModal from "@/components/CommandesModal";
 import { format } from "date-fns";
+
+type ReservationMode = "new" | "view" | null;
 
 export default function RestoPlan() {
   const { data: tables } = useTables();
@@ -37,6 +46,10 @@ export default function RestoPlan() {
 
   const [service, setService] = useState<"today" | "dej" | "diner">("today");
   const [cap, setCap] = useState<"all" | "2" | "4p">("all");
+  
+  // État pour gérer le mode de réservation (nouvelle ou vue d'une existante)
+  const [reservationMode, setReservationMode] = useState<ReservationMode>(null);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
   const filteredTables = useMemo(() => {
     let list = tables ?? [];
@@ -62,6 +75,26 @@ export default function RestoPlan() {
 
   const selectedReservationId = selected?.assignedReservationId ?? "";
 
+  // Statistiques (statique pour l'instant, prêt pour données dynamiques du backend)
+  const topTableStats = useMemo(() => {
+    // Simulation - à remplacer par vraies données du backend
+    return {
+      numero: "T-05",
+      totalReservations: 87,
+      tauxOccupation: 78
+    };
+  }, []);
+
+  const topDishStats = useMemo(() => {
+    // Simulation - à remplacer par vraies données du backend
+    return {
+      nom: "Zebu Roti",
+      category: "Plat principal",
+      totalCommandes: 142,
+      tauxCommande: 34
+    };
+  }, []);
+
   return (
     <Box>
       <Box
@@ -82,7 +115,8 @@ export default function RestoPlan() {
           >
             Aujourd'hui
           </Button>
-          <Button
+          {/* Boutons temporairement cachés */}
+          {/* <Button
             variant={service === "dej" ? "contained" : "outlined"}
             onClick={() => setService("dej")}
           >
@@ -93,27 +127,79 @@ export default function RestoPlan() {
             onClick={() => setService("diner")}
           >
             Dîner
-          </Button>
+          </Button> */}
           <Button
             variant="contained"
             color="primary"
-            onClick={() =>
+            onClick={() => {
+              setReservationMode("new");
+              setSelectedReservation(null);
               document
                 .getElementById("new-resa")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
           >
             Nouvelle réservation
           </Button>
-          <Button
+          {/* <Button
             variant="contained"
             onClick={() => end.mutate()}
             disabled={end.isPending}
           >
             Fin de service
-          </Button>
+          </Button> */}
         </Stack>
       </Box>
+
+      {/* Statistiques */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+            <CardContent>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <TrendingUpIcon color="primary" fontSize="small" />
+                <Typography variant="caption" fontWeight={700} color="primary.main">
+                  Table la plus occupée
+                </Typography>
+              </Stack>
+              <Typography variant="h4" fontWeight={800}>
+                {topTableStats.numero}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ mt: 0.5 }}>
+                {topTableStats.tauxOccupation}%
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {topTableStats.totalReservations} réservations ce mois
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ bgcolor: 'secondary.50', border: '1px solid', borderColor: 'secondary.200' }}>
+            <CardContent>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <RestaurantIcon color="secondary" fontSize="small" />
+                <Typography variant="caption" fontWeight={700} color="secondary.main">
+                  Plat le plus pris
+                </Typography>
+              </Stack>
+              <Typography variant="h5" fontWeight={800}>
+                {topDishStats.nom}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {topDishStats.category}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="secondary.main" sx={{ mt: 0.5 }}>
+                {topDishStats.totalCommandes} commandes
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {topDishStats.tauxCommande}% du total
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <Chip
@@ -160,15 +246,32 @@ export default function RestoPlan() {
         ))}
       </Grid>
 
-      <ReservationsList />
-      <NewReservationForm />
+      <ReservationsList 
+        onViewReservation={(reservation) => {
+          setReservationMode("view");
+          setSelectedReservation(reservation);
+          document
+            .getElementById("new-resa")
+            ?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+      <NewReservationForm 
+        mode={reservationMode}
+        selectedReservation={selectedReservation}
+        onDelete={() => {
+          // TODO: Implémenter la suppression avec le backend
+          setReservationMode(null);
+          setSelectedReservation(null);
+          alert("Réservation supprimée (à implémenter avec le backend)");
+        }}
+      />
 
       <Drawer
         anchor="right"
         open={!!selected}
         onClose={() => setSelected(null)}
       >
-        <Box sx={{ width: 360, p: 3 }}>
+        <Box sx={{ width: 360, p: 3, paddingTop: 10 }}>
           <Typography variant="h6" fontWeight={800}>
             {selected?.numero}
           </Typography>
@@ -215,14 +318,21 @@ export default function RestoPlan() {
   );
 }
 
-function ReservationsList() {
+function ReservationsList({ onViewReservation }: { onViewReservation: (reservation: Reservation) => void }) {
   const res = useTodayRestoReservations();
   const { data: tables } = useTables();
+  const { data: clients } = useClients();
+  
+  const getClientName = (clientId: string) => {
+    const client = clients?.find((c) => c.id === clientId);
+    return client?.nom || clientId;
+  };
+  
   return (
     <Box sx={{ mt: 3 }}>
       <Paper sx={{ p: 2 }}>
         <Typography fontWeight={800} mb={1}>
-          Réservations — Aujourd'hui
+          Liste Réservation
         </Typography>
         <Box
           sx={{
@@ -253,7 +363,7 @@ function ReservationsList() {
               borderColor: "divider",
             }}
           >
-            <Box>{r.clientId}</Box>
+            <Box>{getClientName(r.clientId)}</Box>
             <Box>{r.heure}</Box>
             <Box>{r.nbPersonnes}</Box>
             <Box>{tables?.find((t) => t.id === r.tableId)?.numero ?? "-"}</Box>
@@ -261,13 +371,9 @@ function ReservationsList() {
               <Button
                 size="small"
                 variant="outlined"
-                onClick={() =>
-                  (
-                    document.getElementById("open-orders-" + r.id) as any
-                  )?.click()
-                }
+                onClick={() => onViewReservation(r)}
               >
-                Ouvrir
+                Voir
               </Button>
             </Box>
           </Box>
@@ -277,10 +383,22 @@ function ReservationsList() {
   );
 }
 
-function NewReservationForm() {
+function NewReservationForm({ 
+  mode, 
+  selectedReservation,
+  onDelete 
+}: { 
+  mode: ReservationMode;
+  selectedReservation: Reservation | null;
+  onDelete: () => void;
+}) {
   const createClient = useCreateClient();
   const createResa = useCreateRestoReservation();
+  const updateResa = useUpdateRestoReservation();
+  const deleteResa = useDeleteRestoReservation();
   const { data: tables } = useTables();
+  const { data: clients } = useClients();
+  
   const [form, setForm] = useState({
     nom: "",
     telephone: "",
@@ -290,26 +408,74 @@ function NewReservationForm() {
     table: "",
   });
 
+  // Synchroniser le formulaire quand une réservation est sélectionnée
+  useEffect(() => {
+    if (mode === "view" && selectedReservation) {
+      const client = clients?.find((c) => c.id === selectedReservation.clientId);
+      setForm({
+        nom: client?.nom || "",
+        telephone: client?.telephone || "",
+        date: selectedReservation.dateDebut 
+          ? format(new Date(selectedReservation.dateDebut), "yyyy-MM-dd") 
+          : format(new Date(), "yyyy-MM-dd"),
+        heure: selectedReservation.heure || "19:00",
+        nb: selectedReservation.nbPersonnes || 4,
+        table: selectedReservation.tableId || "",
+      });
+    } else if (mode === "new") {
+      // Réinitialiser pour une nouvelle réservation
+      setForm({
+        nom: "",
+        telephone: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        heure: "19:00",
+        nb: 4,
+        table: "",
+      });
+    }
+  }, [mode, selectedReservation, clients]);
+
   async function save() {
-    const client = await createClient.mutateAsync({
-      nom: form.nom,
-      telephone: form.telephone,
-    });
-    const date = new Date(form.date + "T" + form.heure + ":00");
-    await createResa.mutateAsync({
-      clientId: client.id,
-      dateDebut: date.toISOString(),
-      heure: form.heure,
-      nbPersonnes: form.nb,
-      tableId: form.table || undefined,
-    });
+    if (mode === "view" && selectedReservation) {
+      // Mode édition: mettre à jour la réservation existante
+      const date = new Date(form.date + "T" + form.heure + ":00");
+      await updateResa.mutateAsync({
+        id: selectedReservation.id,
+        dateDebut: date.toISOString(),
+        heure: form.heure,
+        nbPersonnes: form.nb,
+        tableId: form.table || undefined,
+      });
+      // Mettre à jour le client si nécessaire (pour l'instant on ne gère pas ça)
+    } else {
+      // Mode création: créer une nouvelle réservation
+      const client = await createClient.mutateAsync({
+        nom: form.nom,
+        telephone: form.telephone,
+      });
+      const date = new Date(form.date + "T" + form.heure + ":00");
+      await createResa.mutateAsync({
+        clientId: client.id,
+        dateDebut: date.toISOString(),
+        heure: form.heure,
+        nbPersonnes: form.nb,
+        tableId: form.table || undefined,
+      });
+    }
+  }
+  
+  async function handleDelete() {
+    if (selectedReservation) {
+      await deleteResa.mutateAsync({ id: selectedReservation.id });
+      onDelete();
+    }
   }
 
   return (
     <Box id="new-resa" sx={{ mt: 3 }}>
       <Paper sx={{ p: 2 }}>
         <Typography fontWeight={800} mb={2}>
-          Réservation — Nouveau
+          Détails Réservation
         </Typography>
         <Stack
           direction={{ xs: "column", md: "row" }}
@@ -386,9 +552,24 @@ function NewReservationForm() {
         </Stack>
         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
           <Button variant="outlined">Dupliquer</Button>
-          <Button variant="contained" onClick={save}>
-            Enregistrer
+          <Button 
+            variant="contained" 
+            onClick={save}
+            disabled={createResa.isPending || updateResa.isPending}
+          >
+            {mode === "view" ? "Mettre à jour" : "Enregistrer"}
           </Button>
+          {/* Afficher le bouton Supprimer uniquement en mode "view" (réservation existante) */}
+          {mode === "view" && selectedReservation && (
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={handleDelete}
+              disabled={deleteResa.isPending}
+            >
+              Supprimer
+            </Button>
+          )}
         </Stack>
       </Paper>
     </Box>

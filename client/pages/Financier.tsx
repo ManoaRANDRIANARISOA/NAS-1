@@ -20,27 +20,48 @@ import {
   Tooltip,
   LineChart,
   Line,
+  TooltipProps,
 } from "recharts";
 
 const occData = [
-  { name: "101", value: 80 },
-  { name: "102", value: 65 },
-  { name: "201", value: 92 },
+  { name: "CH-1", taux: 80 },
+  { name: "CH-2", taux: 65 },
+  { name: "CH-3", taux: 92 },
+  { name: "CH-4", taux: 75 },
 ];
 const restoResa = [
-  { name: "L", v: 12 },
-  { name: "M", v: 16 },
-  { name: "M ", v: 10 },
-  { name: "J", v: 8 },
-  { name: "V", v: 20 },
-  { name: "S", v: 25 },
-  { name: "D", v: 14 },
+  { name: "L", reservations: 12 },
+  { name: "M", reservations: 16 },
+  { name: "M ", reservations: 10 },
+  { name: "J", reservations: 8 },
+  { name: "V", reservations: 20 },
+  { name: "S", reservations: 25 },
+  { name: "D", reservations: 14 },
 ];
 const ca = [
-  { name: "Héb.", v: 12 },
-  { name: "Resto", v: 21 },
-  { name: "Évén.", v: 3.5 },
+  { name: "Hébergement", revenus: 12500000 },
+  { name: "Restaurant", revenus: 8750000 },
+  { name: "Événements", revenus: 3200000 },
 ];
+
+// Custom tooltip pour afficher les données en français
+function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+  if (active && payload && payload.length) {
+    return (
+      <Box sx={{ bgcolor: 'background.paper', p: 1, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+        <Typography variant="body2" fontWeight={700}>{label}</Typography>
+        {payload.map((entry, index) => (
+          <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+            {entry.name === 'taux' && `Taux: ${entry.value}%`}
+            {entry.name === 'reservations' && `Réservations: ${entry.value}`}
+            {entry.name === 'revenus' && `Revenus: ${Number(entry.value).toLocaleString()} Ar`}
+          </Typography>
+        ))}
+      </Box>
+    );
+  }
+  return null;
+}
 
 function statutChip(s: Facture["statut"]) {
   if (s === "payee") return <Chip size="small" color="success" label="Payée" />;
@@ -273,32 +294,32 @@ export default function Financier() {
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={restoResa}>
                   <XAxis dataKey="name" />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="v" stroke="#6E8EF5" strokeWidth={3} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line type="monotone" dataKey="reservations" stroke="#6E8EF5" strokeWidth={3} />
                 </LineChart>
               </ResponsiveContainer>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="body2" color="text.secondary">
-                Taux d’occupation par chambre
+                Taux d'occupation par chambre (%)
               </Typography>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={occData}>
                   <XAxis dataKey="name" />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#81C784" radius={[6, 6, 0, 0]} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="taux" fill="#81C784" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Grid>
             <Grid item xs={12}>
               <Typography variant="body2" color="text.secondary">
-                Revenus par activité
+                Revenus par activité (Ariary)
               </Typography>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={ca}>
                   <XAxis dataKey="name" />
-                  <Tooltip />
-                  <Bar dataKey="v" fill="#6E8EF5" radius={[6, 6, 0, 0]} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="revenus" fill="#6E8EF5" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Grid>

@@ -1,5 +1,7 @@
-import { Box, Button, Chip, Grid, Paper, Stack, Typography, Drawer, Divider, Select, MenuItem, TextField } from "@mui/material";
+import { Box, Button, Chip, Grid, Paper, Stack, Typography, Drawer, Divider, Select, MenuItem, TextField, Card, CardContent } from "@mui/material";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { addDays, addHours, eachDayOfInterval, endOfMonth, endOfWeek, format, getISOWeek, isWithinInterval, setHours, startOfDay, startOfMonth, startOfWeek } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useMemo, useState, Fragment } from "react";
 import { chambres as chambresData } from "@/services/mock";
 import { useHebergementReservations, useUpdateHebergementReservation } from "@/services/api";
@@ -10,21 +12,29 @@ type View = "month" | "week" | "day";
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color }} />
+      <Box 
+        sx={{ 
+          width: 10, 
+          height: 10, 
+          borderRadius: '50%', 
+          bgcolor: color,
+          border: color === '#FFFFFF' ? '1px solid #ccc' : 'none'
+        }} 
+      />
       <Typography variant="caption">{label}</Typography>
     </Stack>
   );
 }
 
 function reservationColor(r?: Reservation) {
-  if (!r) return "transparent";
-  if (r.statut === "arrivee") return "#E57373"; // occupée
-  return "#FCE8C7"; // réservée
+  if (!r) return "#FFFFFF"; // libre - blanc
+  if (r.statut === "arrivee") return "#EF5350"; // occupée - rouge
+  return "#66BB6A"; // réservée - vert
 }
 
 function roomStatusColor(statut: string) {
-  if (statut === "maintenance") return "#BDBDBD"; // hors service
-  return "transparent"; // libre si pas de resa
+  if (statut === "maintenance") return "#9E9E9E"; // hors service - gris
+  return "#FFFFFF"; // libre si pas de resa - blanc
 }
 
 function intervalFor(view: View, base: Date) {
@@ -58,7 +68,14 @@ function Calendar({ view, dateRef, statusFilter }: { view: View; dateRef: Date; 
   const rooms = chambresData.filter(c => statusFilter === 'all' ? true : roomDerivedStatus(c.id) === statusFilter);
 
   function hasReservation(cId: string, dStart: Date, dEnd: Date) {
-    const r = (res || []).find(rr => rr.type==='hebergement' && rr.chambreId===cId && isWithinInterval(new Date(rr.dateDebut), { start: dStart, end: dEnd }));
+    // Vérifie si une réservation chevauche la période demandée
+    const r = (res || []).find(rr => {
+      if (rr.type !== 'hebergement' || rr.chambreId !== cId) return false;
+      const resDebut = new Date(rr.dateDebut);
+      const resFin = rr.dateFin ? new Date(rr.dateFin) : addDays(resDebut, 1);
+      // Vérifie si les intervalles se chevauchent
+      return resDebut < dEnd && resFin > dStart;
+    });
     return r;
   }
 
@@ -67,18 +84,39 @@ function Calendar({ view, dateRef, statusFilter }: { view: View; dateRef: Date; 
     const end = endOfMonth(dateRef);
     const days = eachDayOfInterval({ start, end });
     return (
-      <Box sx={{ display: 'grid', gridTemplateColumns: `160px repeat(${days.length}, 1fr)`, gap:1, px:1 }}>
-        <Box />
-        {days.map((d)=> (<Box key={d.toISOString()} sx={{ textAlign:'center', color:'text.secondary' }}>{format(d,'d')}</Box>))}
-        {rooms.map((c)=> (
-          <Fragment key={c.id}>
-            <Box sx={{ py:1, fontWeight:700 }}>{c.numero}<Typography variant="caption" sx={{ display:'block' }} color="text.secondary">{c.categorie}</Typography></Box>
-            {days.map((d,i)=> {
-              const r = hasReservation(c.id, d, addDays(d,1));
-              return <Box key={`${c.id}-${i}`} sx={{ height:28, borderRadius:1, bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut), border: '1px dashed', borderColor: 'divider' }} />
-            })}
-          </Fragment>
-        ))}
+      <Box sx={{ overflowX: 'auto', overflowY: 'visible' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: `60px repeat(${days.length}, minmax(32px, 1fr))`, gap: 0.5, alignItems: 'center', minWidth: 'max-content' }}>
+          <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
+          {days.map((d)=> (
+            <Box key={d.toISOString()} sx={{ textAlign:'center', fontSize: '0.75rem', fontWeight: 600, color:'text.secondary', py: 0.5 }}>
+              {format(d,'d')}
+            </Box>
+          ))}
+          {rooms.map((c)=> (
+            <Fragment key={c.id}>
+              <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2, py: 0.5, pr: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="body2" fontWeight={700}>{c.numero}</Typography>
+                <Typography variant="caption" color="text.secondary">{c.categorie}</Typography>
+              </Box>
+              {days.map((d,i)=> {
+                const r = hasReservation(c.id, d, addDays(d,1));
+                return (
+                  <Box 
+                    key={`${c.id}-${i}`} 
+                    sx={{ 
+                      aspectRatio: '1/1',
+                      minHeight: 32,
+                      bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut),
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': { opacity: 0.8, cursor: 'pointer' }
+                    }} 
+                  />
+                );
+              })}
+            </Fragment>
+          ))}
+        </Box>
       </Box>
     );
   }
@@ -87,18 +125,39 @@ function Calendar({ view, dateRef, statusFilter }: { view: View; dateRef: Date; 
     const start = startOfWeek(dateRef, { weekStartsOn: 1 });
     const days = Array.from({length:7}).map((_,i)=> addDays(start,i));
     return (
-      <Box sx={{ display: 'grid', gridTemplateColumns: `160px repeat(7, 1fr)`, gap:1, px:1 }}>
-        <Box />
-        {days.map((d)=> (<Box key={d.toISOString()} sx={{ textAlign:'center', color:'text.secondary' }}>{format(d,'EEE d')}</Box>))}
-        {rooms.map((c)=> (
-          <Fragment key={c.id}>
-            <Box sx={{ py:1, fontWeight:700 }}>{c.numero}<Typography variant="caption" sx={{ display:'block' }} color="text.secondary">{c.categorie}</Typography></Box>
-            {days.map((d,i)=> {
-              const r = hasReservation(c.id, d, addDays(d,1));
-              return <Box key={`${c.id}-${i}`} sx={{ height:28, borderRadius:1, bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut), border: '1px dashed', borderColor: 'divider' }} />
-            })}
-          </Fragment>
-        ))}
+      <Box sx={{ overflowX: 'auto', overflowY: 'visible' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: `60px repeat(7, minmax(80px, 1fr))`, gap: 0.5, alignItems: 'center', minWidth: 'max-content' }}>
+          <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
+          {days.map((d)=> (
+            <Box key={d.toISOString()} sx={{ textAlign:'center', fontSize: '0.75rem', fontWeight: 600, color:'text.secondary', py: 0.5 }}>
+              {format(d,'EEE d', { locale: fr })}
+            </Box>
+          ))}
+          {rooms.map((c)=> (
+            <Fragment key={c.id}>
+              <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2, py: 0.5, pr: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="body2" fontWeight={700}>{c.numero}</Typography>
+                <Typography variant="caption" color="text.secondary">{c.categorie}</Typography>
+              </Box>
+              {days.map((d,i)=> {
+                const r = hasReservation(c.id, d, addDays(d,1));
+                return (
+                  <Box 
+                    key={`${c.id}-${i}`} 
+                    sx={{ 
+                      aspectRatio: '1/1',
+                      minHeight: 48,
+                      bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut),
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': { opacity: 0.8, cursor: 'pointer' }
+                    }} 
+                  />
+                );
+              })}
+            </Fragment>
+          ))}
+        </Box>
       </Box>
     );
   }
@@ -107,18 +166,39 @@ function Calendar({ view, dateRef, statusFilter }: { view: View; dateRef: Date; 
   const start = startOfDay(dateRef);
   const hours = Array.from({length:24}).map((_,i)=> setHours(start, i));
   return (
-    <Box sx={{ display:'grid', gridTemplateColumns:`160px repeat(24, 1fr)`, gap:1, px:1 }}>
-      <Box />
-      {hours.map((h,i)=> (<Box key={i} sx={{ textAlign:'center', color:'text.secondary' }}>{format(h,'HH')}</Box>))}
-      {rooms.map((c)=> (
-        <Fragment key={c.id}>
-          <Box sx={{ py:1, fontWeight:700 }}>{c.numero}<Typography variant="caption" sx={{ display:'block' }} color="text.secondary">{c.categorie}</Typography></Box>
-          {hours.map((h,i)=> {
-            const r = hasReservation(c.id, h, addHours(h,1));
-            return <Box key={`${c.id}-${i}`} sx={{ height:28, borderRadius:1, bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut), border: '1px dashed', borderColor: 'divider' }} />
-          })}
-        </Fragment>
-      ))}
+    <Box sx={{ overflowX: 'auto', overflowY: 'visible' }}>
+      <Box sx={{ display:'grid', gridTemplateColumns:`60px repeat(24, minmax(40px, 1fr))`, gap: 0.5, alignItems: 'center', minWidth: 'max-content' }}>
+        <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
+        {hours.map((h,i)=> (
+          <Box key={i} sx={{ textAlign:'center', fontSize: '0.7rem', fontWeight: 600, color:'text.secondary', py: 0.5 }}>
+            {format(h,'HH')}
+          </Box>
+        ))}
+        {rooms.map((c)=> (
+          <Fragment key={c.id}>
+            <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2, py: 0.5, pr: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="body2" fontWeight={700}>{c.numero}</Typography>
+              <Typography variant="caption" color="text.secondary">{c.categorie}</Typography>
+            </Box>
+            {hours.map((h,i)=> {
+              const r = hasReservation(c.id, h, addHours(h,1));
+              return (
+                <Box 
+                  key={`${c.id}-${i}`} 
+                  sx={{ 
+                    aspectRatio: '1/1',
+                    minHeight: 32,
+                    bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut),
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': { opacity: 0.8, cursor: 'pointer' }
+                  }} 
+                />
+              );
+            })}
+          </Fragment>
+        ))}
+      </Box>
     </Box>
   );
 }
@@ -131,16 +211,67 @@ export default function GestionChambres() {
   const [dateRef, setDateRef] = useState<Date>(startOfMonth(new Date()));
   const [statusFilter, setStatusFilter] = useState<"all"|"libre"|"reservee"|"occupee"|"maintenance">('all');
 
+  // Calcul de la chambre la plus occupée (statique pour l'instant, prêt pour données dynamiques)
+  const chambresStats = useMemo(() => {
+    const stats = chambresData.map(chambre => {
+      const reservations = (list || []).filter(r => r.type === 'hebergement' && r.chambreId === chambre.id);
+      return {
+        chambre: chambre.numero,
+        categorie: chambre.categorie,
+        totalReservations: reservations.length,
+        tauxOccupation: Math.round((reservations.length / 30) * 100) // Simulation
+      };
+    });
+    return stats.sort((a, b) => b.totalReservations - a.totalReservations);
+  }, [list]);
+
   function label() {
-    if (view==='month') return format(dateRef, 'LLLL yyyy');
+    if (view==='month') {
+      const formatted = format(dateRef, 'LLLL yyyy', { locale: fr });
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    }
     if (view==='week') return `Semaine ${getISOWeek(dateRef)}`;
-    return format(dateRef, 'dd LLLL yyyy');
+    const formatted = format(dateRef, 'dd LLLL yyyy', { locale: fr });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   }
 
   return (
     <Box>
       <Typography variant="h4" fontWeight={800} mb={2}>Hébergement — Gestion des chambres</Typography>
 
+      {/* Statistique chambre la plus occupée */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+            <CardContent>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <TrendingUpIcon color="primary" fontSize="small" />
+                <Typography variant="caption" fontWeight={700} color="primary.main">
+                  Chambre la plus occupée
+                </Typography>
+              </Stack>
+              {chambresStats[0] && (
+                <>
+                  <Typography variant="h4" fontWeight={800}>
+                    {chambresStats[0].chambre}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {chambresStats[0].categorie}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ mt: 0.5 }}>
+                    {chambresStats[0].tauxOccupation}%
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Taux d'occupation
+                  </Typography>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Calendrier */}
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
@@ -165,11 +296,11 @@ export default function GestionChambres() {
               </Stack>
             </Stack>
             <Calendar view={view} dateRef={dateRef} statusFilter={statusFilter} />
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-              <Legend color="#81C784" label="Libre" />
-              <Legend color="#FCE8C7" label="Réservée" />
-              <Legend color="#E57373" label="Occupée" />
-              <Legend color="#BDBDBD" label="Hors service" />
+            <Stack direction="row" spacing={2} sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Legend color="#FFFFFF" label="Libre" />
+              <Legend color="#66BB6A" label="Réservée" />
+              <Legend color="#EF5350" label="Occupée" />
+              <Legend color="#9E9E9E" label="Hors service" />
             </Stack>
           </Paper>
         </Grid>

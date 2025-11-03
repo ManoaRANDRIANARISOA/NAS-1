@@ -8,6 +8,7 @@ import {
   stockProduits,
   tables,
   evenements,
+  clients,
 } from "./mock";
 import {
   Commande,
@@ -25,6 +26,7 @@ export const keys = {
   stock: ["stock"] as const,
   menu: ["menu"] as const,
   events: ["events"] as const,
+  clients: ["clients"] as const,
 };
 
 export function useStockProduits() {
@@ -180,6 +182,13 @@ export function useTodayRestoReservations() {
   });
 }
 
+export function useClients() {
+  return useQuery({
+    queryKey: keys.clients,
+    queryFn: async () => clients,
+  });
+}
+
 export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation({
@@ -195,6 +204,7 @@ export function useCreateClient() {
       (await import("./mock")).clients.push(c);
       return c;
     },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.clients }),
   });
 }
 
@@ -224,6 +234,72 @@ export function useCreateRestoReservation() {
         }
       }
       return r;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.reservations });
+      qc.invalidateQueries({ queryKey: keys.tables });
+    },
+  });
+}
+
+export function useUpdateRestoReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Partial<Reservation> & { id: string }) => {
+      const list = (await import("./mock")).reservations as any as Reservation[];
+      const i = list.findIndex((r) => r.id === payload.id);
+      if (i >= 0) {
+        const oldTableId = list[i].tableId;
+        list[i] = { ...list[i], ...payload };
+        
+        // Mettre à jour les tables si nécessaire
+        if (oldTableId !== payload.tableId) {
+          // Libérer l'ancienne table
+          if (oldTableId) {
+            const oldTable = tables.find((t) => t.id === oldTableId);
+            if (oldTable) {
+              oldTable.assignedReservationId = undefined;
+              oldTable.statut = "libre";
+            }
+          }
+          // Assigner la nouvelle table
+          if (payload.tableId) {
+            const newTable = tables.find((t) => t.id === payload.tableId);
+            if (newTable) {
+              newTable.assignedReservationId = payload.id;
+              newTable.statut = list[i].statut === "arrivee" ? "occupee" : "reservee";
+            }
+          }
+        }
+      }
+      return list[i];
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.reservations });
+      qc.invalidateQueries({ queryKey: keys.tables });
+    },
+  });
+}
+
+export function useDeleteRestoReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const list = (await import("./mock")).reservations as any as Reservation[];
+      const i = list.findIndex((r) => r.id === id);
+      if (i >= 0) {
+        const reservation = list[i];
+        // Libérer la table associée
+        if (reservation.tableId) {
+          const table = tables.find((t) => t.id === reservation.tableId);
+          if (table) {
+            table.assignedReservationId = undefined;
+            table.statut = "libre";
+          }
+        }
+        list.splice(i, 1);
+      }
+      return true;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.reservations });

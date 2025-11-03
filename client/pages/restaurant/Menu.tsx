@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import React from "react";
 import {
   Box,
   Button,
@@ -22,12 +23,30 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AddIcon from "@mui/icons-material/Add";
+import RestaurantIcon from "@mui/icons-material/Restaurant";
+import LocalCafeIcon from "@mui/icons-material/LocalCafe";
+import CakeIcon from "@mui/icons-material/Cake";
+import RamenDiningIcon from "@mui/icons-material/RamenDining";
 import {
   useCreateMenuItem,
   useMenuItems,
   useUpdateMenuItem,
 } from "@/services/api";
 import { MenuItem as Item } from "@shared/api";
+
+const categoryIcons: Record<string, React.ReactNode> = {
+  plats: <RestaurantIcon fontSize="small" />,
+  entrees: <RamenDiningIcon fontSize="small" />,
+  boissons: <LocalCafeIcon fontSize="small" />,
+  desserts: <CakeIcon fontSize="small" />,
+};
+
+const categoryLabels: Record<string, string> = {
+  plats: "Plats",
+  entrees: "Entrées",
+  boissons: "Boissons",
+  desserts: "Desserts",
+};
 
 function CategoryChips({
   categories,
@@ -49,7 +68,8 @@ function CategoryChips({
       {categories.map((c) => (
         <Chip
           key={c.id}
-          label={`${c.id} (${c.count})`}
+          icon={categoryIcons[c.id] as any}
+          label={`${categoryLabels[c.id] || c.id} (${c.count})`}
           color={value === c.id ? "primary" : "default"}
           variant={value === c.id ? "filled" : "outlined"}
           onClick={() => onChange(c.id)}
@@ -107,45 +127,97 @@ function ItemCard({
   const unavailable = !item.enabled;
   return (
     <Paper
-      onClick={onClick}
+      onClick={unavailable ? undefined : onClick}
       sx={{
-        p: 1.5,
-        borderRadius: 2,
-        cursor: "pointer",
-        border: "1px solid",
+        borderRadius: 3,
+        cursor: unavailable ? "not-allowed" : "pointer",
+        border: "2px solid",
         borderColor: selected ? "primary.main" : "divider",
         position: "relative",
-        overflow: "hidden",
-        opacity: unavailable ? 0.6 : 1,
+        overflow: "visible",
+        bgcolor: unavailable ? "action.disabledBackground" : "background.paper",
+        filter: unavailable ? "grayscale(0.8) opacity(0.6)" : "none",
+        transition: "all 0.2s",
+        "&:hover": unavailable ? {} : {
+          transform: "translateY(-4px)",
+          boxShadow: 4,
+        },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      {/* Image avec effet 3D - dépasse du cadre */}
+      <Box
+        sx={{
+          position: "relative",
+          height: 140,
+          overflow: "visible",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          pt: 2,
+        }}
+      >
         <img
           src={item.photoUrl || "/placeholder.svg"}
-          alt=""
-          width={56}
-          height={56}
-          style={{ borderRadius: 8, objectFit: "cover" }}
+          alt={item.nom}
+          style={{
+            width: "120px",
+            height: "120px",
+            borderRadius: "16px",
+            objectFit: "cover",
+            position: "relative",
+            top: "-20px",
+            boxShadow: "0 8px 16px rgba(0,0,0,0.15)",
+          }}
         />
-        <Box sx={{ flex: 1 }}>
-          <Typography fontWeight={700} lineHeight={1.2}>
-            {item.nom}
+        {/* Prix en cercle sur l'image (côté droit) */}
+        <Box
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 8,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            bgcolor: "primary.main",
+            color: "white",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: 2,
+            fontWeight: 800,
+          }}
+        >
+          <Typography variant="caption" fontSize="0.65rem" lineHeight={1}>
+            {item.prix.toLocaleString()}
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-            <Chip
-              size="small"
-              label={unavailable ? "Indisponible" : "Disponible"}
-              color={unavailable ? "default" : "success"}
-              variant={unavailable ? "outlined" : "filled"}
-            />
-            <Typography variant="caption" color="text.secondary">
-              {item.categorieId}
-            </Typography>
-          </Stack>
+          <Typography variant="caption" fontSize="0.6rem" fontWeight={600}>
+            Ar
+          </Typography>
         </Box>
-        <Typography fontWeight={800}>
-          {item.prix.toLocaleString()} Ar
+      </Box>
+
+      {/* Contenu en dessous de l'image */}
+      <Box sx={{ p: 2, pt: 0 }}>
+        <Typography 
+          fontWeight={700} 
+          fontSize="1rem" 
+          textAlign="center"
+          sx={{ mb: 1 }}
+        >
+          {item.nom}
         </Typography>
+        
+        {/* Catégorie à la place des étoiles */}
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Chip
+            size="small"
+            icon={categoryIcons[item.categorieId] as any}
+            label={categoryLabels[item.categorieId] || item.categorieId}
+            variant="outlined"
+            sx={{ fontSize: "0.75rem" }}
+          />
+        </Box>
       </Box>
     </Paper>
   );
@@ -297,24 +369,19 @@ export default function RestoMenu() {
       {/* Grid of items + cart aside */}
       <Grid container spacing={1.5}>
         <Grid item xs={12} md={8}>
-          <Grid container spacing={1.5}>
+          <Grid container spacing={2}>
             {filtered.map((i) => (
-              <Grid key={i.id} item xs={12} sm={6} md={6} lg={4}>
-                <div onDoubleClick={() => addToCart(i)}>
-                  <ItemCard
-                    item={i}
-                    selected={selected?.id === i.id}
-                    onClick={() => setSelectedId(i.id)}
-                  />
-                </div>
-                <Button
-                  size="small"
-                  sx={{ mt: 0.5 }}
-                  variant="outlined"
-                  onClick={() => addToCart(i)}
-                >
-                  Ajouter
-                </Button>
+              <Grid key={i.id} item xs={12} sm={6} md={4}>
+                <ItemCard
+                  item={i}
+                  selected={selected?.id === i.id}
+                  onClick={() => {
+                    setSelectedId(i.id);
+                    if (i.enabled) {
+                      addToCart(i);
+                    }
+                  }}
+                />
               </Grid>
             ))}
           </Grid>
@@ -398,12 +465,39 @@ export default function RestoMenu() {
                 defaultValue={selected.nom}
                 onBlur={(e) => saveField("nom", e.target.value)}
               />
-              <TextField
-                size="small"
-                label="Catégorie"
-                defaultValue={selected.categorieId}
-                onBlur={(e) => saveField("categorieId", e.target.value)}
-              />
+              <FormControl size="small">
+                <InputLabel>Catégorie</InputLabel>
+                <Select
+                  label="Catégorie"
+                  value={selected.categorieId}
+                  onChange={(e) => saveField("categorieId", e.target.value as string)}
+                >
+                  <MItem value="entrees">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <RamenDiningIcon fontSize="small" />
+                      <span>Entrées</span>
+                    </Stack>
+                  </MItem>
+                  <MItem value="plats">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <RestaurantIcon fontSize="small" />
+                      <span>Plats</span>
+                    </Stack>
+                  </MItem>
+                  <MItem value="boissons">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <LocalCafeIcon fontSize="small" />
+                      <span>Boissons</span>
+                    </Stack>
+                  </MItem>
+                  <MItem value="desserts">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CakeIcon fontSize="small" />
+                      <span>Desserts</span>
+                    </Stack>
+                  </MItem>
+                </Select>
+              </FormControl>
               <TextField
                 size="small"
                 label="Prix (Ar)"

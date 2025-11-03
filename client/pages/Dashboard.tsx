@@ -379,7 +379,7 @@ export default function Dashboard() {
           >
             <Box>
               <Typography fontWeight={700}>
-                R��servations hébergement
+                Réservations hébergement
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Calendrier et détails
