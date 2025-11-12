@@ -2,7 +2,6 @@ import {
   Box,
   Button,
   Chip,
-  Drawer,
   FormControl,
   Grid,
   InputLabel,
@@ -17,7 +16,7 @@ import {
 } from "@mui/material";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Fragment } from "react";
 import {
   useTables,
   useEndOfService,
@@ -30,8 +29,7 @@ import {
 } from "@/services/api";
 import { Reservation, TableResto } from "@shared/api";
 import { TableStatus } from "@/components/StatusChip";
-import AssignTableDialog from "@/components/AssignTableDialog";
-import CommandesModal from "@/components/CommandesModal";
+// Modals latéraux retirés selon demande
 import { format } from "date-fns";
 
 type ReservationMode = "new" | "view" | null;
@@ -39,9 +37,7 @@ type ReservationMode = "new" | "view" | null;
 export default function RestoPlan() {
   const { data: tables } = useTables();
   const todayRes = useTodayRestoReservations();
-  const [selected, setSelected] = useState<TableResto | null>(null);
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [orderOpen, setOrderOpen] = useState(false);
+  // Drawer/modal latéral retiré
   const end = useEndOfService();
 
   const [service, setService] = useState<"today" | "dej" | "diner">("today");
@@ -50,6 +46,14 @@ export default function RestoPlan() {
   // État pour gérer le mode de réservation (nouvelle ou vue d'une existante)
   const [reservationMode, setReservationMode] = useState<ReservationMode>(null);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+
+  // Pré-remplissage du formulaire lors d'un clic dans la vue journalière
+  const [initialNewHour, setInitialNewHour] = useState<string | undefined>();
+  const [initialNewTableId, setInitialNewTableId] = useState<string | undefined>();
+  function setInitialNew(payload: { heure?: string; tableId?: string }) {
+    setInitialNewHour(payload.heure);
+    setInitialNewTableId(payload.tableId);
+  }
 
   const filteredTables = useMemo(() => {
     let list = tables ?? [];
@@ -73,7 +77,7 @@ export default function RestoPlan() {
     return { label: "" };
   }
 
-  const selectedReservationId = selected?.assignedReservationId ?? "";
+  // const selectedReservationId = selected?.assignedReservationId ?? ""; // retiré
 
   // Statistiques (statique pour l'instant, prêt pour données dynamiques du backend)
   const topTableStats = useMemo(() => {
@@ -105,9 +109,14 @@ export default function RestoPlan() {
           mb: 2,
         }}
       >
-        <Typography variant="h4" fontWeight={800}>
-          Plan de salle
-        </Typography>
+        <Box>
+          <Typography variant="h4" fontWeight={800}>
+            Plan de salle
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Total couverts: {(tables ?? []).reduce((sum, t) => sum + (t.capacite || 0), 0)}
+          </Typography>
+        </Box>
         <Stack direction="row" spacing={1}>
           <Button
             variant={service === "today" ? "contained" : "outlined"}
@@ -222,13 +231,81 @@ export default function RestoPlan() {
         />
       </Stack>
 
+      {/* Vue journalière des disponibilités */}
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography fontWeight={800} mb={1}>Disponibilités — Vue journalière</Typography>
+        {filteredTables.length === 0 && (
+          <Typography color="text.secondary">Aucune table pour ce filtre</Typography>
+        )}
+        {filteredTables.length > 0 && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: `140px repeat(${12}, 1fr)`, gap: 0.5 }}>
+            <Box />
+            {Array.from({ length: 12 }, (_, i) => `${String(i + 10).padStart(2, '0')}:00`).map((h) => (
+              <Box key={h} sx={{ textAlign: 'center', fontSize: '0.75rem', color: 'text.secondary' }}>{h}</Box>
+            ))}
+            {filteredTables.map((t) => (
+              <Fragment key={t.id}>
+                <Box sx={{ py: 0.5, fontWeight: 700 }}>
+                  {t.numero}
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {t.capacite} pers · {t.emplacement || 'Intérieur'}
+                  </Typography>
+                </Box>
+                {Array.from({ length: 12 }, (_, i) => `${String(i + 10).padStart(2, '0')}:00`).map((h) => {
+                  const res = (todayRes.data ?? []).find((r) => r.tableId === t.id && (r.heure || "").startsWith(h));
+                  const status: 'libre' | 'reservee' | 'occupee' = res
+                    ? (res.statut === 'arrivee' ? 'occupee' : 'reservee')
+                    : 'libre';
+                  const bg = status === 'libre' ? '#FFFFFF' : status === 'reservee' ? '#66BB6A' : '#EF5350';
+                  const label = res
+                    ? (status === 'occupee' ? `Depuis ${res.heure}` : `Réservé ${res.heure}`)
+                    : '';
+                  return (
+                    <Box
+                      key={`${t.id}-${h}`}
+                      onClick={() => {
+                        if (res) {
+                          setReservationMode('view');
+                          setSelectedReservation(res);
+                        } else {
+                          setReservationMode('new');
+                          setSelectedReservation(null);
+                          setInitialNew({ heure: h, tableId: t.id });
+                        }
+                        document.getElementById('new-resa')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      sx={{
+                        height: 34,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: bg,
+                        cursor: 'pointer',
+                        '&:hover': { opacity: 0.88 }
+                      }}
+                    >
+                      {!!label && (
+                        <Typography variant="caption" sx={{ px: 0.5, color: status === 'libre' ? 'text.secondary' : 'common.white' }}>
+                          {label}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </Box>
+        )}
+        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+          <Chip size="small" label="Libre" variant="outlined" sx={{ bgcolor: '#FFFFFF' }} />
+          <Chip size="small" label="Réservée" color="success" variant="outlined" />
+          <Chip size="small" label="Occupée" color="error" variant="outlined" />
+        </Stack>
+      </Paper>
+
       <Grid container spacing={2}>
         {filteredTables.map((t) => (
           <Grid item key={t.id} xs={6} sm={4} md={3} lg={2}>
-            <Paper
-              onClick={() => setSelected(t)}
-              sx={{ p: 2, cursor: "pointer", "&:hover": { boxShadow: 3 } }}
-            >
+            <Paper sx={{ p: 2 }}>
               <Typography variant="subtitle1" fontWeight={800}>
                 {t.numero}
               </Typography>
@@ -264,56 +341,11 @@ export default function RestoPlan() {
           setSelectedReservation(null);
           alert("Réservation supprimée (à implémenter avec le backend)");
         }}
+        initialHour={initialNewHour}
+        initialTableId={initialNewTableId}
       />
 
-      <Drawer
-        anchor="right"
-        open={!!selected}
-        onClose={() => setSelected(null)}
-      >
-        <Box sx={{ width: 360, p: 3, paddingTop: 10 }}>
-          <Typography variant="h6" fontWeight={800}>
-            {selected?.numero}
-          </Typography>
-          <Typography color="text.secondary">
-            Capacité: {selected?.capacite}
-          </Typography>
-          <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-            <Button variant="outlined" onClick={() => setAssignOpen(true)}>
-              Assigner
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => setOrderOpen(true)}
-              disabled={!selectedReservationId}
-            >
-              Commandes
-            </Button>
-            <Button
-              color="warning"
-              variant="outlined"
-              onClick={() => setSelected(null)}
-            >
-              Fermer
-            </Button>
-          </Box>
-        </Box>
-      </Drawer>
-
-      {selected && (
-        <AssignTableDialog
-          open={assignOpen}
-          onClose={() => setAssignOpen(false)}
-          tableId={selected.id}
-        />
-      )}
-      {selectedReservationId && (
-        <CommandesModal
-          open={orderOpen}
-          onClose={() => setOrderOpen(false)}
-          reservationId={selectedReservationId}
-        />
-      )}
+      {/* Drawer et modals supprimés pour une interface simplifiée */}
     </Box>
   );
 }
@@ -386,11 +418,15 @@ function ReservationsList({ onViewReservation }: { onViewReservation: (reservati
 function NewReservationForm({ 
   mode, 
   selectedReservation,
-  onDelete 
+  onDelete,
+  initialHour,
+  initialTableId
 }: { 
   mode: ReservationMode;
   selectedReservation: Reservation | null;
   onDelete: () => void;
+  initialHour?: string;
+  initialTableId?: string;
 }) {
   const createClient = useCreateClient();
   const createResa = useCreateRestoReservation();
@@ -407,6 +443,9 @@ function NewReservationForm({
     nb: 4,
     table: "",
   });
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const nowStr = format(new Date(), "HH:mm");
 
   // Synchroniser le formulaire quand une réservation est sélectionnée
   useEffect(() => {
@@ -428,12 +467,12 @@ function NewReservationForm({
         nom: "",
         telephone: "",
         date: format(new Date(), "yyyy-MM-dd"),
-        heure: "19:00",
+        heure: initialHour || "19:00",
         nb: 4,
-        table: "",
+        table: initialTableId || "",
       });
     }
-  }, [mode, selectedReservation, clients]);
+  }, [mode, selectedReservation, clients, initialHour, initialTableId]);
 
   async function save() {
     if (mode === "view" && selectedReservation) {
@@ -520,9 +559,11 @@ function NewReservationForm({
           <TextField
             size="small"
             fullWidth
+            type="time"
             label="Heure"
             value={form.heure}
             onChange={(e) => setForm({ ...form, heure: e.target.value })}
+            inputProps={{ step: 300, min: form.date === todayStr ? nowStr : undefined }}
           />
           <TextField
             size="small"
@@ -544,7 +585,7 @@ function NewReservationForm({
               <MenuItem value="">Aucune</MenuItem>
               {tables?.map((t) => (
                 <MenuItem key={t.id} value={t.id}>
-                  {t.numero}
+                  {t.numero} — {t.capacite} pers · {t.emplacement || 'Intérieur'}
                 </MenuItem>
               ))}
             </Select>

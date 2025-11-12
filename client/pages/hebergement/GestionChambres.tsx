@@ -1,11 +1,14 @@
-import { Box, Button, Chip, Grid, Paper, Stack, Typography, Drawer, Divider, Select, MenuItem, TextField, Card, CardContent } from "@mui/material";
+import { Box, Button, Chip, Grid, Paper, Stack, Typography, Divider, Select, MenuItem, TextField, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete } from "@mui/material";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import { addDays, addHours, eachDayOfInterval, endOfMonth, endOfWeek, format, getISOWeek, isWithinInterval, setHours, startOfDay, startOfMonth, startOfWeek } from "date-fns";
+import { addDays, format, getISOWeek, startOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useMemo, useState, Fragment } from "react";
+import { useMemo, useState, useEffect, Fragment } from "react";
 import { chambres as chambresData } from "@/services/mock";
-import { useHebergementReservations, useUpdateHebergementReservation } from "@/services/api";
+import { useHebergementReservations, useUpdateHebergementReservation, useCreateHebergementReservation, useClients, useCreateClient } from "@/services/api";
 import { Reservation } from "@shared/api";
+import { RoomCalendar } from "@/components/RoomCalendar";
+import { exportToCSV, exportToPDF } from "@/lib/export";
+import { useSearchParams } from "react-router-dom";
 
 type View = "month" | "week" | "day";
 
@@ -26,204 +29,49 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function reservationColor(r?: Reservation) {
-  if (!r) return "#FFFFFF"; // libre - blanc
-  if (r.statut === "arrivee") return "#EF5350"; // occupée - rouge
-  return "#66BB6A"; // réservée - vert
-}
-
-function roomStatusColor(statut: string) {
-  if (statut === "maintenance") return "#9E9E9E"; // hors service - gris
-  return "#FFFFFF"; // libre si pas de resa - blanc
-}
-
-function intervalFor(view: View, base: Date) {
-  if (view === "month") {
-    const start = startOfMonth(base);
-    const end = endOfMonth(base);
-    return { start, end };
-  }
-  if (view === "week") {
-    const start = startOfWeek(base, { weekStartsOn: 1 });
-    const end = endOfWeek(base, { weekStartsOn: 1 });
-    return { start, end };
-  }
-  const start = startOfDay(base);
-  const end = addHours(start, 24);
-  return { start, end };
-}
-
-function Calendar({ view, dateRef, statusFilter }: { view: View; dateRef: Date; statusFilter: "all" | "libre" | "reservee" | "occupee" | "maintenance"; }) {
-  const { data: res } = useHebergementReservations();
-  const range = intervalFor(view, dateRef);
-
-  function roomDerivedStatus(roomId: string) {
-    const room = chambresData.find(c=>c.id===roomId)!;
-    if (room.statut === "maintenance") return "maintenance" as const;
-    const has = (res || []).some(r => r.type==='hebergement' && r.chambreId===roomId && isWithinInterval(new Date(r.dateDebut), range));
-    if (has) return "reservee" as const;
-    return "libre" as const;
-  }
-
-  const rooms = chambresData.filter(c => statusFilter === 'all' ? true : roomDerivedStatus(c.id) === statusFilter);
-
-  function hasReservation(cId: string, dStart: Date, dEnd: Date) {
-    // Vérifie si une réservation chevauche la période demandée
-    const r = (res || []).find(rr => {
-      if (rr.type !== 'hebergement' || rr.chambreId !== cId) return false;
-      const resDebut = new Date(rr.dateDebut);
-      const resFin = rr.dateFin ? new Date(rr.dateFin) : addDays(resDebut, 1);
-      // Vérifie si les intervalles se chevauchent
-      return resDebut < dEnd && resFin > dStart;
-    });
-    return r;
-  }
-
-  if (view === 'month') {
-    const start = startOfMonth(dateRef);
-    const end = endOfMonth(dateRef);
-    const days = eachDayOfInterval({ start, end });
-    return (
-      <Box sx={{ overflowX: 'auto', overflowY: 'visible' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: `60px repeat(${days.length}, minmax(32px, 1fr))`, gap: 0.5, alignItems: 'center', minWidth: 'max-content' }}>
-          <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
-          {days.map((d)=> (
-            <Box key={d.toISOString()} sx={{ textAlign:'center', fontSize: '0.75rem', fontWeight: 600, color:'text.secondary', py: 0.5 }}>
-              {format(d,'d')}
-            </Box>
-          ))}
-          {rooms.map((c)=> (
-            <Fragment key={c.id}>
-              <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2, py: 0.5, pr: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="body2" fontWeight={700}>{c.numero}</Typography>
-                <Typography variant="caption" color="text.secondary">{c.categorie}</Typography>
-              </Box>
-              {days.map((d,i)=> {
-                const r = hasReservation(c.id, d, addDays(d,1));
-                return (
-                  <Box 
-                    key={`${c.id}-${i}`} 
-                    sx={{ 
-                      aspectRatio: '1/1',
-                      minHeight: 32,
-                      bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut),
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      '&:hover': { opacity: 0.8, cursor: 'pointer' }
-                    }} 
-                  />
-                );
-              })}
-            </Fragment>
-          ))}
-        </Box>
-      </Box>
-    );
-  }
-
-  if (view === 'week') {
-    const start = startOfWeek(dateRef, { weekStartsOn: 1 });
-    const days = Array.from({length:7}).map((_,i)=> addDays(start,i));
-    return (
-      <Box sx={{ overflowX: 'auto', overflowY: 'visible' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: `60px repeat(7, minmax(80px, 1fr))`, gap: 0.5, alignItems: 'center', minWidth: 'max-content' }}>
-          <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
-          {days.map((d)=> (
-            <Box key={d.toISOString()} sx={{ textAlign:'center', fontSize: '0.75rem', fontWeight: 600, color:'text.secondary', py: 0.5 }}>
-              {format(d,'EEE d', { locale: fr })}
-            </Box>
-          ))}
-          {rooms.map((c)=> (
-            <Fragment key={c.id}>
-              <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2, py: 0.5, pr: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="body2" fontWeight={700}>{c.numero}</Typography>
-                <Typography variant="caption" color="text.secondary">{c.categorie}</Typography>
-              </Box>
-              {days.map((d,i)=> {
-                const r = hasReservation(c.id, d, addDays(d,1));
-                return (
-                  <Box 
-                    key={`${c.id}-${i}`} 
-                    sx={{ 
-                      aspectRatio: '1/1',
-                      minHeight: 48,
-                      bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut),
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      '&:hover': { opacity: 0.8, cursor: 'pointer' }
-                    }} 
-                  />
-                );
-              })}
-            </Fragment>
-          ))}
-        </Box>
-      </Box>
-    );
-  }
-
-  // day view: 24 hours
-  const start = startOfDay(dateRef);
-  const hours = Array.from({length:24}).map((_,i)=> setHours(start, i));
-  return (
-    <Box sx={{ overflowX: 'auto', overflowY: 'visible' }}>
-      <Box sx={{ display:'grid', gridTemplateColumns:`60px repeat(24, minmax(40px, 1fr))`, gap: 0.5, alignItems: 'center', minWidth: 'max-content' }}>
-        <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
-        {hours.map((h,i)=> (
-          <Box key={i} sx={{ textAlign:'center', fontSize: '0.7rem', fontWeight: 600, color:'text.secondary', py: 0.5 }}>
-            {format(h,'HH')}
-          </Box>
-        ))}
-        {rooms.map((c)=> (
-          <Fragment key={c.id}>
-            <Box sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2, py: 0.5, pr: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="body2" fontWeight={700}>{c.numero}</Typography>
-              <Typography variant="caption" color="text.secondary">{c.categorie}</Typography>
-            </Box>
-            {hours.map((h,i)=> {
-              const r = hasReservation(c.id, h, addHours(h,1));
-              return (
-                <Box 
-                  key={`${c.id}-${i}`} 
-                  sx={{ 
-                    aspectRatio: '1/1',
-                    minHeight: 32,
-                    bgcolor: r ? reservationColor(r) : roomStatusColor(c.statut),
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    '&:hover': { opacity: 0.8, cursor: 'pointer' }
-                  }} 
-                />
-              );
-            })}
-          </Fragment>
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
 export default function GestionChambres() {
   const { data: list } = useHebergementReservations();
   const update = useUpdateHebergementReservation();
+  const create = useCreateHebergementReservation();
+  const { data: clients } = useClients();
   const [open, setOpen] = useState<Reservation | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [view, setView] = useState<View>('month');
   const [dateRef, setDateRef] = useState<Date>(startOfMonth(new Date()));
-  const [statusFilter, setStatusFilter] = useState<"all"|"libre"|"reservee"|"occupee"|"maintenance">('all');
+  const [searchParams] = useSearchParams();
+  
+  // Ouvrir automatiquement le modal de création si demandé via l’URL
+  useEffect(() => {
+    if (searchParams.get('newReservation') === '1') {
+      setCreateModalOpen(true);
+    }
+  }, [searchParams]);
+  // Status filter supprimé sur cette page (UI)
 
-  // Calcul de la chambre la plus occupée (statique pour l'instant, prêt pour données dynamiques)
+  // Calcul dynamique de la chambre la plus occupée du mois courant
   const chambresStats = useMemo(() => {
-    const stats = chambresData.map(chambre => {
-      const reservations = (list || []).filter(r => r.type === 'hebergement' && r.chambreId === chambre.id);
-      return {
-        chambre: chambre.numero,
-        categorie: chambre.categorie,
-        totalReservations: reservations.length,
-        tauxOccupation: Math.round((reservations.length / 30) * 100) // Simulation
-      };
+    const start = startOfMonth(dateRef);
+    const end = endOfMonth(dateRef);
+    const daysInMonth = eachDayOfInterval({ start, end }).length;
+    const stats = chambresData.map((ch) => {
+      // Compte des jours occupés dans le mois (statut annulé ignoré)
+      const occupiedDays = (list || [])
+        .filter((r) => r.type === 'hebergement' && r.chambreId === ch.id && r.statut !== 'annulee')
+        .reduce((sum, r) => {
+          const dStart = new Date(r.dateDebut);
+          const dEnd = new Date(r.dateFin || r.dateDebut);
+          // chevauchement avec le mois
+          const overlapStart = dStart < start ? start : dStart;
+          const overlapEnd = dEnd > end ? end : dEnd;
+          if (overlapEnd <= overlapStart) return sum;
+          const overlapDays = eachDayOfInterval({ start: overlapStart, end: overlapEnd }).length;
+          return sum + Math.max(0, overlapDays);
+        }, 0);
+      const taux = Math.min(100, Math.round((occupiedDays / daysInMonth) * 100));
+      return { chambre: ch.numero, categorie: ch.categorie, totalReservations: occupiedDays, tauxOccupation: taux };
     });
     return stats.sort((a, b) => b.totalReservations - a.totalReservations);
-  }, [list]);
+  }, [list, dateRef]);
 
   function label() {
     if (view==='month') {
@@ -233,6 +81,32 @@ export default function GestionChambres() {
     if (view==='week') return `Semaine ${getISOWeek(dateRef)}`;
     const formatted = format(dateRef, 'dd LLLL yyyy', { locale: fr });
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  function handleExportReservations() {
+    const exportData = (list || []).map(r => ({
+      'Client': clients?.find(c => c.id === r.clientId)?.nom || r.clientId,
+      'Arrivée': format(new Date(r.dateDebut), 'dd/MM/yyyy'),
+      'Départ': r.dateFin ? format(new Date(r.dateFin), 'dd/MM/yyyy') : '-',
+      'Chambre': chambresData.find(c => c.id === r.chambreId)?.numero || '-',
+      'Statut': r.statut,
+      'Personnes': r.nbPersonnes || '-'
+    }));
+    
+    exportToCSV(exportData, 'reservations_hebergement');
+  }
+
+  function handleExportPDF() {
+    const exportData = (list || []).map(r => ({
+      'Client': clients?.find(c => c.id === r.clientId)?.nom || r.clientId,
+      'Arrivée': format(new Date(r.dateDebut), 'dd/MM/yyyy'),
+      'Départ': r.dateFin ? format(new Date(r.dateFin), 'dd/MM/yyyy') : '-',
+      'Chambre': chambresData.find(c => c.id === r.chambreId)?.numero || '-',
+      'Statut': r.statut,
+      'Personnes': r.nbPersonnes || '-'
+    }));
+    
+    exportToPDF('Liste des réservations - Hébergement', exportData, 'reservations_hebergement');
   }
 
   return (
@@ -283,19 +157,17 @@ export default function GestionChambres() {
                 <Chip size="small" label="Aujourd'hui" variant="outlined" onClick={()=> setDateRef(new Date()) } />
               </Stack>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Chip size="small" label={label()} />
-                <Chip size="small" label="◀" onClick={()=> setDateRef(d=> view==='month'? addDays(d, -30): view==='week'? addDays(d,-7): addDays(d,-1)) } />
-                <Chip size="small" label="▶" onClick={()=> setDateRef(d=> view==='month'? addDays(d, 30): view==='week'? addDays(d,7): addDays(d,1)) } />
-                <Select size="small" value={statusFilter} onChange={(e)=> setStatusFilter(e.target.value as any)}>
-                  <MenuItem value="all">Statut: Tous</MenuItem>
-                  <MenuItem value="libre">Libre</MenuItem>
-                  <MenuItem value="reservee">Réservée</MenuItem>
-                  <MenuItem value="occupee">Occupée</MenuItem>
-                  <MenuItem value="maintenance">Hors service</MenuItem>
-                </Select>
-              </Stack>
+              <Chip size="small" label={label()} />
+              <Chip size="small" label="◀" onClick={()=> setDateRef(d=> view==='month'? addDays(d, -30): view==='week'? addDays(d,-7): addDays(d,-1)) } />
+              <Chip size="small" label="▶" onClick={()=> setDateRef(d=> view==='month'? addDays(d, 30): view==='week'? addDays(d,7): addDays(d,1)) } />
             </Stack>
-            <Calendar view={view} dateRef={dateRef} statusFilter={statusFilter} />
+          </Stack>
+          <RoomCalendar 
+            view={view} 
+            dateRef={dateRef} 
+            statusFilter={'all'}
+            reservations={list || []}
+          />
             <Stack direction="row" spacing={2} sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
               <Legend color="#FFFFFF" label="Libre" />
               <Legend color="#66BB6A" label="Réservée" />
@@ -310,8 +182,11 @@ export default function GestionChambres() {
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
               <Typography fontWeight={800}>Réservations — Liste</Typography>
               <Stack direction="row" spacing={1}>
-                <Button variant="outlined">Export</Button>
-                <Button variant="contained">Nouvelle réservation</Button>
+                <Button variant="outlined" onClick={handleExportReservations}>Export CSV</Button>
+                <Button variant="outlined" onClick={handleExportPDF}>Export PDF</Button>
+                <Button variant="contained" onClick={() => setCreateModalOpen(true)}>
+                  Nouvelle réservation
+                </Button>
               </Stack>
             </Stack>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px 120px 100px', px: 1, py: 1, color: 'text.secondary', fontWeight: 700 }}>
@@ -319,7 +194,7 @@ export default function GestionChambres() {
             </Box>
             {(list || []).map((r) => (
               <Box key={r.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px 120px 100px', px: 1, py: 1, alignItems: 'center', borderTop: '1px solid', borderColor: 'divider' }}>
-                <Box>{r.clientId}</Box>
+                <Box>{clients?.find(c => c.id === r.clientId)?.nom ?? r.clientId}</Box>
                 <Box>{format(new Date(r.dateDebut), 'dd/MM/yyyy')}</Box>
                 <Box>{r.dateFin ? format(new Date(r.dateFin), 'dd/MM/yyyy') : '-'}</Box>
                 <Box>{chambresData.find((c) => c.id === r.chambreId)?.numero ?? '-'}</Box>
@@ -331,16 +206,38 @@ export default function GestionChambres() {
         </Grid>
       </Grid>
 
-      <Drawer anchor="right" open={!!open} onClose={() => setOpen(null)}>
-        <Box sx={{ width: 420, p: 2 }}>
-          <Typography variant="h6" fontWeight={800}>Réservation</Typography>
-          <Divider sx={{ my: 1 }} />
+      {/* Dialog pour consulter/éditer une réservation existante avec calendrier interactif */}
+      <Dialog open={!!open} onClose={() => setOpen(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Voir réservation</DialogTitle>
+        <DialogContent>
           {!open && <Typography color="text.secondary">Sélectionnez une réservation</Typography>}
           {open && (
-            <EditReservation r={open} onClose={()=> setOpen(null)} onSave={(p)=> update.mutate(p as any, { onSuccess: ()=> setOpen(null) })} />
+            <EditReservation 
+              r={open} 
+              reservations={list || []}
+              onClose={()=> setOpen(null)} 
+              onSave={(p)=> update.mutate(p as any, { onSuccess: ()=> setOpen(null) })} 
+            />
           )}
-        </Box>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal pour créer une nouvelle réservation */}
+      <Dialog open={createModalOpen} onClose={() => setCreateModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Nouvelle réservation</DialogTitle>
+        <DialogContent>
+          <CreateReservationForm 
+            reservations={list || []}
+            onClose={() => setCreateModalOpen(false)}
+            initialClientId={searchParams.get('clientId') || undefined}
+            onCreate={(payload) => {
+              create.mutate(payload, {
+                onSuccess: () => setCreateModalOpen(false)
+              });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
@@ -349,32 +246,455 @@ function Ariary({ value }: { value: number }) {
   return <>{value.toLocaleString('fr-MG')} Ar</>;
 }
 
-function EditReservation({ r, onSave, onClose }: { r: Reservation; onSave: (p: Partial<Reservation> & { id: string }) => void; onClose: ()=>void }) {
+function CreateReservationForm({ 
+  reservations, 
+  onClose, 
+  onCreate,
+  initialClientId
+}: { 
+  reservations: Reservation[];
+  onClose: () => void;
+  onCreate: (payload: any) => void;
+  initialClientId?: string;
+}) {
+  const { data: clients } = useClients();
+  const createClient = useCreateClient();
+  
+  const today = new Date();
+  const tomorrow = addDays(today, 1);
+  const [modalDateRef, setModalDateRef] = useState<Date>(today);
+  
+  const [form, setForm] = useState({
+    clientId: initialClientId ?? '',
+    clientNom: '',
+    clientTelephone: '',
+    chambreId: '',
+    dateDebut: today,
+    dateFin: tomorrow,
+    nbPersonnes: 2,
+    statut: 'confirmee' as const,
+  });
+
+  const [selectedDates, setSelectedDates] = useState<{ start: Date | null; end: Date | null }>({
+    start: null,
+    end: null
+  });
+
+  // Calculer les chambres disponibles pour les dates sélectionnées
+  const availableRooms = useMemo(() => {
+    if (!selectedDates.start || !selectedDates.end) return [];
+    
+    const debut = selectedDates.start;
+    const fin = selectedDates.end;
+    
+    return chambresData.filter(chambre => {
+      if (chambre.statut === 'maintenance') return false;
+      
+      const hasConflict = reservations.some(r => {
+        if (r.type !== 'hebergement' || r.chambreId !== chambre.id) return false;
+        const resDebut = new Date(r.dateDebut);
+        const resFin = new Date(r.dateFin || r.dateDebut);
+        return resDebut < fin && resFin > debut;
+      });
+      
+      return !hasConflict;
+    });
+  }, [selectedDates, reservations]);
+
+  // Générer les dates affichées pour le calendrier (fenêtre glissante)
+  const weekStart = startOfWeek(modalDateRef, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 13) });
+
+  // Vérifier la disponibilité d'une chambre pour une date
+  function isRoomAvailable(chambreId: string, date: Date) {
+    const nextDay = addDays(date, 1);
+    const hasConflict = reservations.some(r => {
+      if (r.type !== 'hebergement' || r.chambreId !== chambreId) return false;
+      if (r.statut === 'annulee') return false;
+      const resDebut = new Date(r.dateDebut);
+      const resFin = new Date(r.dateFin || r.dateDebut);
+      return resDebut < nextDay && resFin > date;
+    });
+    return !hasConflict;
+  }
+
+  // Gérer le clic sur une cellule du calendrier
+  function handleCellClick(chambreId: string, date: Date) {
+    if (!isRoomAvailable(chambreId, date)) return;
+    // Si changement de chambre, repartir sur nouvelle sélection
+    if (!form.chambreId || form.chambreId !== chambreId) {
+      setSelectedDates({ start: date, end: null });
+      setForm({ ...form, chambreId, dateDebut: date, dateFin: addDays(date, 1) });
+      return;
+    }
+
+    // Sélection flexible: clics successifs étendent/réduisent la plage
+    if (selectedDates.start && selectedDates.end) {
+      if (date >= selectedDates.start) {
+        setSelectedDates({ start: selectedDates.start, end: date });
+        setForm({ ...form, chambreId, dateFin: date });
+      } else {
+        // Nouveau début avant l'ancien: repart sur nouveau début
+        setSelectedDates({ start: date, end: null });
+        setForm({ ...form, chambreId, dateDebut: date, dateFin: addDays(date, 1) });
+      }
+      return;
+    }
+
+    if (!selectedDates.start) {
+      setSelectedDates({ start: date, end: null });
+      setForm({ ...form, chambreId, dateDebut: date, dateFin: addDays(date, 1) });
+      return;
+    }
+
+    // start défini, end non défini
+    if (date.getTime() === selectedDates.start.getTime()) {
+      // Toggle: reclique sur la même date => désélection
+      setSelectedDates({ start: null, end: null });
+      setForm({ ...form, chambreId: '', dateDebut: today, dateFin: addDays(today, 1) });
+    } else if (date > selectedDates.start) {
+      setSelectedDates({ start: selectedDates.start, end: date });
+      setForm({ ...form, chambreId, dateFin: date });
+    } else if (date < selectedDates.start) {
+      setSelectedDates({ start: date, end: null });
+      setForm({ ...form, chambreId, dateDebut: date, dateFin: addDays(date, 1) });
+    }
+  }
+
+  // Couleur de la cellule selon la sélection
+  function getCellColor(chambreId: string, date: Date) {
+    const chambre = chambresData.find(c => c.id === chambreId);
+    if (chambre?.statut === 'maintenance') return '#9E9E9E'; // Gris - indisponible
+    if (!isRoomAvailable(chambreId, date)) return '#EF5350'; // Rouge - occupé
+    
+    if (selectedDates.start && selectedDates.end && chambreId === form.chambreId) {
+      if (date >= selectedDates.start && date <= selectedDates.end) {
+        return '#66BB6A'; // Vert - sélectionné
+      }
+    } else if (selectedDates.start && !selectedDates.end && chambreId === form.chambreId) {
+      if (date.getTime() === selectedDates.start.getTime()) {
+        return '#66BB6A'; // Vert - début sélectionné
+      }
+    }
+    
+    return '#FFFFFF'; // Blanc - disponible
+  }
+
+  // Validation
+  const isValid = (form.clientId || (form.clientNom && form.clientTelephone)) && 
+                  form.chambreId && 
+                  selectedDates.start;
+
+  async function handleCreate() {
+    if (!isValid) return;
+    
+    let clientId = form.clientId;
+    
+    // Créer un nouveau client si nécessaire
+    if (!clientId && form.clientNom && form.clientTelephone) {
+      try {
+        const newClient = await createClient.mutateAsync({
+          nom: form.clientNom,
+          telephone: form.clientTelephone
+        });
+        clientId = newClient.id;
+      } catch (error) {
+        console.error('Erreur lors de la création du client:', error);
+        return;
+      }
+    }
+    
+    onCreate({
+      clientId,
+      chambreId: form.chambreId,
+      dateDebut: selectedDates.start!.toISOString(),
+      dateFin: (selectedDates.end ? selectedDates.end : addDays(selectedDates.start!, 1)).toISOString(),
+      nbPersonnes: form.nbPersonnes,
+      statut: form.statut,
+    });
+  }
+
+  return (
+    <Stack spacing={2} sx={{ mt: 2 }}>
+      <Typography variant="body2" fontWeight={700}>Client</Typography>
+      <Autocomplete
+        freeSolo
+        options={clients || []}
+        getOptionLabel={(option) => typeof option === 'string' ? option : `${option.nom} - ${option.telephone}`}
+        value={clients?.find(c => c.id === form.clientId) || null}
+        onChange={(_, newValue) => {
+          if (newValue && typeof newValue !== 'string') {
+            setForm({ ...form, clientId: newValue.id, clientNom: '', clientTelephone: '' });
+          } else {
+            setForm({ ...form, clientId: '', clientNom: '', clientTelephone: '' });
+          }
+        }}
+        onInputChange={(_, newInputValue) => {
+          setForm({ ...form, clientNom: newInputValue, clientId: '' });
+        }}
+        renderInput={(params) => (
+          <TextField {...params} size="small" label="Nom du client" placeholder="Saisir ou sélectionner" />
+        )}
+      />
+
+      {!form.clientId && form.clientNom && (
+        <TextField
+          size="small"
+          label="Téléphone du nouveau client"
+          value={form.clientTelephone}
+          onChange={(e) => setForm({ ...form, clientTelephone: e.target.value })}
+          placeholder="032 00 000 00"
+        />
+      )}
+
+      <Divider />
+      
+      <Typography variant="body2" fontWeight={700}>
+        Sélectionnez les dates et la chambre (cliquez sur le calendrier)
+      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Chip size="small" label={`Semaine du ${format(weekStart, 'dd MMM yyyy', { locale: fr })}`} />
+        <Chip size="small" label="◀" onClick={() => setModalDateRef(d => addDays(d, -7))} />
+        <Chip size="small" label="▶" onClick={() => setModalDateRef(d => addDays(d, 7))} />
+      </Stack>
+      
+      <Box sx={{ 
+        border: '1px solid', 
+        borderColor: 'divider', 
+        borderRadius: 1, 
+        p: 1,
+        maxHeight: 300,
+        overflowY: 'auto',
+        overflowX: 'auto'
+      }}>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: `80px repeat(${weekDays.length}, minmax(90px, 1fr))`, 
+          gap: 0.5,
+          minWidth: 'max-content'
+        }}>
+          <Box />
+          {weekDays.map((d) => (
+            <Box key={d.toISOString()} sx={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, py: 0.5 }}>
+              {format(d, 'EEE d', { locale: fr })}
+            </Box>
+          ))}
+          
+          {chambresData.map((chambre) => (
+            <Fragment key={chambre.id}>
+              <Box sx={{ py: 0.5, fontSize: '0.75rem', fontWeight: 700 }}>
+                {chambre.numero}
+              </Box>
+              {weekDays.map((date) => {
+                const available = isRoomAvailable(chambre.id, date);
+                const color = getCellColor(chambre.id, date);
+                
+                return (
+                  <Box
+                    key={`${chambre.id}-${date.toISOString()}`}
+                    onClick={() => available && handleCellClick(chambre.id, date)}
+                    sx={{
+                      height: 32,
+                      bgcolor: color,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      cursor: available ? 'pointer' : 'not-allowed',
+                      opacity: available ? 1 : 0.5,
+                      '&:hover': available ? { opacity: 0.8 } : {}
+                    }}
+                  />
+                );
+              })}
+            </Fragment>
+          ))}
+        </Box>
+      </Box>
+
+      <Stack direction="row" spacing={1} sx={{ fontSize: '0.75rem' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 12, height: 12, bgcolor: '#FFFFFF', border: '1px solid #ccc' }} />
+          <Typography variant="caption">Disponible</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 12, height: 12, bgcolor: '#66BB6A' }} />
+          <Typography variant="caption">Sélectionné</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 12, height: 12, bgcolor: '#EF5350' }} />
+          <Typography variant="caption">Occupé</Typography>
+        </Box>
+      </Stack>
+
+      {(selectedDates.start && form.chambreId) && (
+        <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'primary.50' }}>
+          <Typography variant="body2" fontWeight={700}>Résumé de la réservation</Typography>
+          <Typography variant="caption">
+            Chambre: {chambresData.find(c => c.id === form.chambreId)?.numero}
+          </Typography>
+          <br />
+          <Typography variant="caption">
+            {selectedDates.end
+              ? `Du ${format(selectedDates.start, 'dd MMM yyyy', { locale: fr })} au ${format(selectedDates.end, 'dd MMM yyyy', { locale: fr })}`
+              : `Séjour d’un jour le ${format(selectedDates.start, 'dd MMM yyyy', { locale: fr })}`}
+          </Typography>
+        </Paper>
+      )}
+
+      <TextField
+        size="small"
+        type="number"
+        label="Nombre de personnes"
+        value={form.nbPersonnes}
+        onChange={(e) => setForm({ ...form, nbPersonnes: parseInt(e.target.value || '1', 10) })}
+        inputProps={{ min: 1 }}
+      />
+
+      <Select
+        size="small"
+        value={form.statut}
+        onChange={(e) => setForm({ ...form, statut: e.target.value as any })}
+      >
+        <MenuItem value="en_attente">En attente</MenuItem>
+        <MenuItem value="confirmee">Confirmée</MenuItem>
+      </Select>
+
+      <Stack direction="row" spacing={1} justifyContent="flex-end">
+        <Button onClick={onClose}>Annuler</Button>
+        <Button 
+          variant="contained" 
+          onClick={handleCreate}
+          disabled={!isValid}
+        >
+          Créer
+        </Button>
+      </Stack>
+    </Stack>
+  );
+}
+
+function EditReservation({ r, reservations, onSave, onClose }: { r: Reservation; reservations: Reservation[]; onSave: (p: Partial<Reservation> & { id: string }) => void; onClose: ()=>void }) {
+  const { data: clients } = useClients();
   const [form, setForm] = useState({
     clientId: r.clientId || '',
     chambreId: r.chambreId || '',
-    dateDebut: r.dateDebut,
-    dateFin: r.dateFin || '',
     statut: r.statut,
   });
+
+  const initialStart = new Date(r.dateDebut);
+  const initialEnd = r.dateFin ? new Date(r.dateFin) : null;
+  const [selectedDates, setSelectedDates] = useState<{ start: Date | null; end: Date | null }>({
+    start: initialStart,
+    end: initialEnd,
+  });
+  const [modalDateRef, setModalDateRef] = useState<Date>(initialStart);
+
+  const weekStart = startOfWeek(modalDateRef, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 13) });
+
+  function isRoomAvailable(chambreId: string, date: Date) {
+    const nextDay = addDays(date, 1);
+    const hasConflict = reservations.some(rr => {
+      if (rr.id === r.id) return false;
+      if (rr.type !== 'hebergement' || rr.chambreId !== chambreId) return false;
+      if (rr.statut === 'annulee') return false;
+      const resDebut = new Date(rr.dateDebut);
+      const resFin = new Date(rr.dateFin || rr.dateDebut);
+      return resDebut < nextDay && resFin > date;
+    });
+    const chambre = chambresData.find(c => c.id === chambreId);
+    if (chambre?.statut === 'maintenance') return false;
+    return !hasConflict;
+  }
+
+  function handleCellClick(chambreId: string, date: Date) {
+    if (!isRoomAvailable(chambreId, date)) return;
+    if (!form.chambreId || form.chambreId !== chambreId) {
+      setSelectedDates({ start: date, end: null });
+      setForm({ ...form, chambreId });
+      return;
+    }
+
+    if (selectedDates.start && selectedDates.end) {
+      if (date >= selectedDates.start) {
+        setSelectedDates({ start: selectedDates.start, end: date });
+      } else {
+        setSelectedDates({ start: date, end: null });
+      }
+      return;
+    }
+
+    if (!selectedDates.start) {
+      setSelectedDates({ start: date, end: null });
+      return;
+    }
+
+    if (date.getTime() === selectedDates.start.getTime()) {
+      // Toggle: reclique sur la même date => aucune sélection
+      setSelectedDates({ start: null, end: null });
+      setForm({ ...form, chambreId: '' });
+      return;
+    } else if (date > selectedDates.start) {
+      setSelectedDates({ start: selectedDates.start, end: date });
+    } else if (date < selectedDates.start) {
+      setSelectedDates({ start: date, end: null });
+    }
+  }
+
+  function getCellColor(chambreId: string, date: Date) {
+    const chambre = chambresData.find(c => c.id === chambreId);
+    if (chambre?.statut === 'maintenance') return '#9E9E9E';
+    if (!isRoomAvailable(chambreId, date)) return '#EF5350';
+
+    if (selectedDates.start && selectedDates.end && chambreId === form.chambreId) {
+      if (date >= selectedDates.start && date <= selectedDates.end) return '#66BB6A';
+    } else if (selectedDates.start && !selectedDates.end && chambreId === form.chambreId) {
+      if (date.getTime() === selectedDates.start.getTime()) return '#66BB6A';
+    }
+    return '#FFFFFF';
+  }
+
+  const isValid = form.chambreId && selectedDates.start;
+
+  function handleSave() {
+    // Si aucune date sélectionnée, annuler la réservation
+    if (!selectedDates.start) {
+      onSave({ id: r.id, statut: 'annulee' });
+      onClose();
+      return;
+    }
+    if (!isValid) return;
+    onSave({
+      id: r.id,
+      clientId: form.clientId,
+      chambreId: form.chambreId,
+      dateDebut: selectedDates.start!.toISOString(),
+      dateFin: (selectedDates.end ? selectedDates.end : addDays(selectedDates.start!, 1)).toISOString(),
+      statut: form.statut,
+    });
+  }
+
+  // Facture liée (inchangé)
   const [lines, setLines] = useState<{ label: string; qte: number; prix: number }[]>([
     { label: 'Nuitée', qte: 1, prix: 120000 },
     { label: 'Petit-déj.', qte: 2, prix: 8000 },
   ]);
   const total = lines.reduce((a,b)=> a + b.qte*b.prix, 0);
-
   function changeLine(i:number, key: 'label'|'qte'|'prix', v:any){
     setLines(ls=> ls.map((l,idx)=> idx===i? { ...l, [key]: key==='label'? v : parseInt(v||'0',10)} : l));
   }
 
   return (
-    <Stack spacing={1}>
-      <TextField size="small" label="Client" value={form.clientId} onChange={(e)=> setForm({ ...form, clientId: e.target.value })} />
-      <Select size="small" value={form.chambreId} onChange={(e)=> setForm({ ...form, chambreId: e.target.value })}>
-        {chambresData.map(c=> <MenuItem key={c.id} value={c.id}>{c.numero} · {c.categorie}</MenuItem>)}
-      </Select>
-      <TextField size="small" type="date" label="Arrivée" value={form.dateDebut.slice(0,10)} onChange={(e)=> setForm({ ...form, dateDebut: new Date(e.target.value).toISOString() })} />
-      <TextField size="small" type="date" label="Départ" value={(form.dateFin||'').slice(0,10)} onChange={(e)=> setForm({ ...form, dateFin: new Date(e.target.value).toISOString() })} />
+    <Stack spacing={2} sx={{ mt: 1 }}>
+      <Typography variant="body2" fontWeight={700}>Client</Typography>
+      {/* Uniformiser l’affichage avec Autocomplete */}
+      <Autocomplete
+        size="small"
+        options={(clients || []).map(c => ({ id: c.id, label: c.nom }))}
+        value={(clients || []).map(c => ({ id: c.id, label: c.nom })).find(o => o.id === form.clientId) || null}
+        onChange={(_, v) => setForm({ ...form, clientId: v?.id || '' })}
+        renderInput={(params) => <TextField {...params} label="Client" />}
+      />
+
       <Select size="small" value={form.statut} onChange={(e)=> setForm({ ...form, statut: e.target.value as any })}>
         <MenuItem value="en_attente">En attente</MenuItem>
         <MenuItem value="confirmee">Confirmée</MenuItem>
@@ -382,6 +702,83 @@ function EditReservation({ r, onSave, onClose }: { r: Reservation; onSave: (p: P
         <MenuItem value="terminee">Terminée</MenuItem>
         <MenuItem value="annulee">Annulée</MenuItem>
       </Select>
+
+      <Divider />
+      <Typography variant="body2" fontWeight={700}>Sélectionnez les dates et la chambre (calendrier)</Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Chip size="small" label={`Semaine du ${format(weekStart, 'dd MMM yyyy', { locale: fr })}`} />
+        <Chip size="small" label="◀" onClick={() => setModalDateRef(d => addDays(d, -7))} />
+        <Chip size="small" label="▶" onClick={() => setModalDateRef(d => addDays(d, 7))} />
+      </Stack>
+
+      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: `80px repeat(${weekDays.length}, minmax(90px, 1fr))`, gap: 0.5, minWidth: 'max-content' }}>
+          <Box />
+          {weekDays.map((d) => (
+            <Box key={d.toISOString()} sx={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, py: 0.5 }}>
+              {format(d, 'EEE d', { locale: fr })}
+            </Box>
+          ))}
+
+          {chambresData.map((chambre) => (
+            <Fragment key={chambre.id}>
+              <Box sx={{ py: 0.5, fontSize: '0.75rem', fontWeight: 700 }}>
+                {chambre.numero}
+              </Box>
+              {weekDays.map((date) => {
+                const available = isRoomAvailable(chambre.id, date);
+                const color = getCellColor(chambre.id, date);
+                return (
+                  <Box
+                    key={`${chambre.id}-${date.toISOString()}`}
+                    onClick={() => available && handleCellClick(chambre.id, date)}
+                    sx={{
+                      height: 32,
+                      bgcolor: color,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      cursor: available ? 'pointer' : 'not-allowed',
+                      opacity: available ? 1 : 0.5,
+                      '&:hover': available ? { opacity: 0.8 } : {}
+                    }}
+                  />
+                );
+              })}
+            </Fragment>
+          ))}
+        </Box>
+      </Box>
+
+      {(selectedDates.start && form.chambreId) && (
+        <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'primary.50' }}>
+          <Typography variant="body2" fontWeight={700}>Résumé</Typography>
+          <Typography variant="caption">
+            Chambre: {chambresData.find(c => c.id === form.chambreId)?.numero}
+          </Typography>
+          <br />
+          <Typography variant="caption">
+            {selectedDates.end
+              ? `Du ${format(selectedDates.start, 'dd MMM yyyy', { locale: fr })} au ${format(selectedDates.end, 'dd MMM yyyy', { locale: fr })}`
+              : `Séjour d’un jour le ${format(selectedDates.start, 'dd MMM yyyy', { locale: fr })}`}
+          </Typography>
+        </Paper>
+      )}
+
+      {!selectedDates.start && (
+        <Typography variant="caption" color="text.secondary">
+          Aucune date sélectionnée : en validant, la réservation sera annulée.
+        </Typography>
+      )}
+
+      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+        <Button color="error" variant="outlined" onClick={() => { onSave({ id: r.id, statut: 'annulee' }); onClose(); }}>
+          Annuler la réservation
+        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={onClose}>Annuler modification</Button>
+          <Button variant="contained" onClick={handleSave} disabled={!isValid}>Valider</Button>
+        </Stack>
+      </Stack>
 
       <Divider />
       <Typography fontWeight={700}>Facture liée</Typography>
@@ -395,11 +792,6 @@ function EditReservation({ r, onSave, onClose }: { r: Reservation; onSave: (p: P
       ))}
       <Button variant="outlined" onClick={()=> setLines(ls=> [...ls, { label:'Article', qte:1, prix:0 }])}>Ajouter une ligne</Button>
       <Typography><b>Total:</b> <Ariary value={total} /></Typography>
-
-      <Stack direction="row" spacing={1}>
-        <Button variant="outlined" onClick={onClose}>Annuler</Button>
-        <Button variant="contained" onClick={()=> onSave({ id: r.id, ...form })}>Valider</Button>
-      </Stack>
     </Stack>
   );
 }

@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, PropsWithChildren } from "react";
+import { utilisateurs, userAuth } from "@/services/mock";
+import { useAppDispatch, setRole } from "@/store";
 
 interface User {
   email: string;
@@ -17,25 +19,27 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
+  const dispatch = useAppDispatch();
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulation de connexion - À remplacer par un vrai backend
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    // Simulation de latence
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Validation simple pour la simulation
-    if (email && password) {
-      setUser({
-        email,
-        name: "Utilisateur NAS",
-        role: "admin",
-      });
-      return true;
-    }
-    return false;
+    // Recherche du compte par login (email)
+    const found = utilisateurs.find((u) => u.login.toLowerCase() === email.toLowerCase());
+    if (!found) return false;
+    const ok = userAuth[found.login] && userAuth[found.login] === password;
+    if (!ok) return false;
+
+    // Mettre à jour le contexte et le store (RBAC)
+    setUser({ email: found.login, name: found.nom, role: found.role });
+    dispatch(setRole(found.role as any));
+    return true;
   };
 
   const logout = () => {
     setUser(null);
+    // Optionnel: réinitialiser le rôle (on conserve le rôle actuel pour éviter le flicker du menu)
   };
 
   return (

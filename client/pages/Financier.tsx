@@ -8,10 +8,14 @@ import {
   Stack,
   TextField,
   Typography,
+  Select,
+  MenuItem,
 } from "@mui/material";
-import { useMemo, useState } from "react";
-import { useCreateFacture, useFactures } from "@/services/api";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useCreateFacture, useFactures, useClients } from "@/services/api";
 import { Facture } from "@shared/api";
+import { exportToCSV, exportToPDF } from "@/lib/export";
 import {
   ResponsiveContainer,
   BarChart,
@@ -22,27 +26,19 @@ import {
   Line,
   TooltipProps,
 } from "recharts";
-
-const occData = [
-  { name: "CH-1", taux: 80 },
-  { name: "CH-2", taux: 65 },
-  { name: "CH-3", taux: 92 },
-  { name: "CH-4", taux: 75 },
-];
-const restoResa = [
-  { name: "L", reservations: 12 },
-  { name: "M", reservations: 16 },
-  { name: "M ", reservations: 10 },
-  { name: "J", reservations: 8 },
-  { name: "V", reservations: 20 },
-  { name: "S", reservations: 25 },
-  { name: "D", reservations: 14 },
-];
-const ca = [
-  { name: "Hébergement", revenus: 12500000 },
-  { name: "Restaurant", revenus: 8750000 },
-  { name: "Événements", revenus: 3200000 },
-];
+import {
+  useHebergementReservations,
+  useRestoReservations,
+} from "@/services/api";
+import { chambres as chambresData } from "@/services/mock";
+import {
+  eachDayOfInterval,
+  startOfMonth,
+  endOfMonth,
+  subDays,
+  format,
+} from "date-fns";
+import { fr } from "date-fns/locale";
 
 // Custom tooltip pour afficher les données en français
 function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
@@ -72,23 +68,38 @@ function statutChip(s: Facture["statut"]) {
 
 export default function Financier() {
   const { data: factures } = useFactures();
+  const { data: clients } = useClients();
+  const { data: restoAll } = useRestoReservations();
+  const { data: hebergementAll } = useHebergementReservations();
   const create = useCreateFacture();
+  const [searchParams] = useSearchParams();
 
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
 
-  const list = useMemo(
-    () =>
-      (factures || []).filter(
-        (f) =>
-          f.clientNom.toLowerCase().includes(q.toLowerCase()) ||
-          f.numero.toLowerCase().includes(q.toLowerCase()),
-      ),
-    [factures, q],
-  );
+  const clientIdParam = searchParams.get("clientId");
+  const list = useMemo(() => {
+    let base = (factures || []).filter(
+      (f) =>
+        f.clientNom.toLowerCase().includes(q.toLowerCase()) ||
+        f.numero.toLowerCase().includes(q.toLowerCase()),
+    );
+    if (clientIdParam) {
+      const client = (clients || []).find((c) => c.id === clientIdParam);
+      if (client) base = base.filter((f) => f.clientNom === client.nom);
+    }
+    return base;
+  }, [factures, q, clientIdParam, clients]);
 
   const selected = list.find((f) => f.id === selectedId) || list[0] || null;
+
+  useEffect(() => {
+    const fromParam = searchParams.get("factureId");
+    if (fromParam) {
+      setSelectedId(fromParam);
+    }
+  }, [searchParams]);
 
   const [draft, setDraft] = useState({
     clientNom: "",
@@ -107,7 +118,7 @@ export default function Financier() {
       lignes: [
         { description: draft.description, qte: draft.qte, pu: draft.pu },
       ],
-      statut: "emisee",
+      statut: "emise",
     });
     setShowNew(false);
     setDraft({
@@ -124,8 +135,89 @@ export default function Financier() {
     .filter((f) => f.statut === "payee")
     .reduce((s, f) => s + f.totalTTC, 0);
   const enRetard = (factures || [])
-    .filter((f) => f.statut === "emisee")
+    .filter((f) => f.statut === "emise")
     .reduce((s, f) => s + f.totalTTC, 0);
+
+  // Rapports dynamiques
+  const restoResa = useMemo(() => {
+    const now = new Date();
+    const days = eachDayOfInterval({ start: subDays(now, 6), end: now });
+    return days.map((d) => {
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      const count = (restoAll || []).filter((r) => {
+        const rd = new Date(r.dateDebut);
+        rd.setHours(0, 0, 0, 0);
+        return r.statut !== "annulee" && rd.getTime() === dayStart.getTime();
+      }).length;
+      const name = format(d, "EEEEE", { locale: fr }).toUpperCase();
+      return { name, reservations: count };
+    });
+  }, [restoAll]);
+
+  const occData = useMemo(() => {
+    const now = new Date();
+    const mStart = startOfMonth(now);
+    const mEnd = endOfMonth(now);
+    const totalDays = eachDayOfInterval({ start: mStart, end: mEnd }).length;
+    const firstFourRooms = chambresData.slice(0, 4);
+    const counts: Record<string, number> = Object.fromEntries(
+      firstFourRooms.map((ch) => [ch.id, 0]),
+    );
+    (hebergementAll || [])
+      .filter((r) => r.statut !== "annulee" && r.statut !== "no_show")
+      .forEach((r) => {
+        if (!r.chambreId || !(r.chambreId in counts)) return;
+        const s = new Date(r.dateDebut);
+        const e = new Date(r.dateFin ?? r.dateDebut);
+        const start = s < mStart ? mStart : s;
+        const end = e > mEnd ? mEnd : e;
+        const days = eachDayOfInterval({ start, end });
+        counts[r.chambreId] = (counts[r.chambreId] || 0) + days.length;
+      });
+    return firstFourRooms.map((ch) => ({
+      name: ch.numero,
+      taux: totalDays ? Math.round(((counts[ch.id] || 0) / totalDays) * 100) : 0,
+    }));
+  }, [hebergementAll]);
+
+  const ca = useMemo(() => {
+    const sum = (src: Facture["source"]) =>
+      (factures || [])
+        .filter((f) => f.source === src)
+        .reduce((s, f) => s + f.totalTTC, 0);
+    return [
+      { name: "Hébergement", revenus: sum("Hebergement") },
+      { name: "Restaurant", revenus: sum("Restaurant") },
+      { name: "Événements", revenus: sum("Evenement") },
+    ];
+  }, [factures]);
+
+  function handleExportFactures() {
+    const exportData = (factures || []).map(f => ({
+      'Numéro': f.numero,
+      'Date': new Date(f.date).toLocaleDateString('fr-FR'),
+      'Client': f.clientNom,
+      'Source': f.source,
+      'Montant (Ar)': f.totalTTC.toLocaleString(),
+      'Statut': f.statut === 'payee' ? 'Payée' : f.statut === 'annulee' ? 'Annulée' : 'Envoyée'
+    }));
+    
+    exportToCSV(exportData, 'factures');
+  }
+
+  function handleExportPDF() {
+    const exportData = (factures || []).map(f => ({
+      'Numéro': f.numero,
+      'Date': new Date(f.date).toLocaleDateString('fr-FR'),
+      'Client': f.clientNom,
+      'Source': f.source,
+      'Montant': `${f.totalTTC.toLocaleString()} Ar`,
+      'Statut': f.statut === 'payee' ? 'Payée' : f.statut === 'annulee' ? 'Annulée' : 'Envoyée'
+    }));
+    
+    exportToPDF('Liste des factures', exportData, 'factures');
+  }
 
   return (
     <Box>
@@ -170,8 +262,8 @@ export default function Financier() {
             >
               Nouvelle facture
             </Button>
-            <Button variant="outlined">Exporter PDF</Button>
-            <Button variant="outlined">Relancer impayés</Button>
+            <Button variant="outlined" onClick={handleExportPDF}>Exporter PDF</Button>
+            <Button variant="outlined" onClick={handleExportFactures}>Exporter Excel</Button>
           </Stack>
         </Paper>
       </Box>
@@ -351,14 +443,17 @@ export default function Financier() {
                 setDraft((d) => ({ ...d, clientNom: e.target.value }))
               }
             />
-            <TextField
+            <Select
               size="small"
-              label="Source"
               value={draft.source}
               onChange={(e) =>
                 setDraft((d) => ({ ...d, source: e.target.value as any }))
               }
-            />
+            >
+              <MenuItem value="Hebergement">Hébergement</MenuItem>
+              <MenuItem value="Restaurant">Restaurant</MenuItem>
+              <MenuItem value="Evenement">Événement</MenuItem>
+            </Select>
             <TextField
               size="small"
               label="Article"

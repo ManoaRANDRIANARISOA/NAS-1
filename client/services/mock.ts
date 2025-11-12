@@ -16,6 +16,7 @@ import {
   StockProduit,
   TableResto,
   Evenement,
+  Utilisateur,
 } from "@shared/api";
 
 export const clients: Client[] = [
@@ -86,6 +87,34 @@ export const clients: Client[] = [
     reference: "CLI-00234",
   },
 ];
+
+// Comptes utilisateurs (mock) — utilisés pour l’auth et l’admin
+export const utilisateurs: Utilisateur[] = [
+  { id: "u-admin", nom: "Administrateur", login: "admin@nas.local", role: "admin" },
+  { id: "u-reception", nom: "Réception", login: "reception@nas.local", role: "reception" },
+  { id: "u-chef", nom: "Chef de salle", login: "chef.salle@nas.local", role: "chef_salle" },
+  { id: "u-serveur", nom: "Serveur", login: "serveur@nas.local", role: "serveur" },
+  { id: "u-cuisine", nom: "Cuisine", login: "cuisine@nas.local", role: "cuisine" },
+  { id: "u-bar", nom: "Bar", login: "bar@nas.local", role: "bar" },
+  { id: "u-comptoir", nom: "Comptoir", login: "comptoir@nas.local", role: "comptoir" },
+  { id: "u-economat", nom: "Économat", login: "economat@nas.local", role: "economat" },
+  { id: "u-comptable", nom: "Comptable", login: "comptable@nas.local", role: "comptable" },
+  { id: "u-direction", nom: "Direction", login: "direction@nas.local", role: "direction" },
+];
+
+// Secrets mock (plaintext, uniquement pour démo) — login -> password
+export const userAuth: Record<string, string> = {
+  "admin@nas.local": "nas2025",
+  "reception@nas.local": "nas2025",
+  "chef.salle@nas.local": "nas2025",
+  "serveur@nas.local": "nas2025",
+  "cuisine@nas.local": "nas2025",
+  "bar@nas.local": "nas2025",
+  "comptoir@nas.local": "nas2025",
+  "economat@nas.local": "nas2025",
+  "comptable@nas.local": "nas2025",
+  "direction@nas.local": "nas2025",
+};
 
 export const chambres: Chambre[] = [
   {
@@ -602,7 +631,7 @@ export const factures: Facture[] = [
     source: "Restaurant",
     lignes: [{ description: "Déjeuner", qte: 3, pu: 15000 }],
     totalTTC: 45000,
-    statut: "emisee",
+    statut: "emise",
   },
   {
     id: "f2",
@@ -613,6 +642,37 @@ export const factures: Facture[] = [
     lignes: [{ description: "Nuitée", qte: 2, pu: 80000 }],
     totalTTC: 160000,
     statut: "payee",
+  },
+  // Factures liées aux événements confirmés
+  {
+    id: "f3",
+    numero: "NAS-2025-0003",
+    date: new Date().toISOString(),
+    clientNom: "Sommelier",
+    source: "Evenement",
+    lignes: [{ description: "Dégustation vins (forfait)", qte: 1, pu: 375000 }],
+    totalTTC: 375000,
+    statut: "emise",
+  },
+  {
+    id: "f4",
+    numero: "NAS-2025-0004",
+    date: new Date().toISOString(),
+    clientNom: "Wedding Planner",
+    source: "Evenement",
+    lignes: [{ description: "Mariage — prestation", qte: 1, pu: 2400000 }],
+    totalTTC: 2400000,
+    statut: "payee",
+  },
+  {
+    id: "f5",
+    numero: "NAS-2025-0005",
+    date: new Date().toISOString(),
+    clientNom: "Organisateur culturel",
+    source: "Evenement",
+    lignes: [{ description: "Concert acoustique — prestation", qte: 1, pu: 750000 }],
+    totalTTC: 750000,
+    statut: "emise",
   },
 ];
 

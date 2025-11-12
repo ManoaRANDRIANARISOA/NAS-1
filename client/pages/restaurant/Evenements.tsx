@@ -26,8 +26,10 @@ import {
   useCreateEvenement,
   useEvenements,
   useUpdateEvenement,
+  useCreateFacture,
 } from "@/services/api";
 import { Evenement } from "@shared/api";
+import { useNavigate } from "react-router-dom";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import WineBarIcon from "@mui/icons-material/WineBar";
 import CakeIcon from "@mui/icons-material/Cake";
@@ -91,18 +93,24 @@ function CalendarMonth({
       </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
         {days.map((d) => (
-          <Paper key={d.toISOString()} sx={{ p: 1.2, minHeight: 96 }}>
+          <Paper key={d.toISOString()} sx={{ p: 1.2, minHeight: 120, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="caption" color="text.secondary">
               {format(d, "d")}
             </Typography>
-            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+            <Stack spacing={0.5} sx={{ mt: 0.5, overflowY: 'auto' }}>
               {eventsFor(d).map((ev) => (
                 <Chip
                   key={ev.id}
                   size="small"
-                  label={ev.nom}
+                  label={
+                    <Box sx={{ textAlign: 'left', width: '100%' }}>
+                      <div>{ev.nom}</div>
+                      <div style={{ fontSize: '0.72em', opacity: 0.85 }}>{ev.heures}</div>
+                    </Box>
+                  }
                   color={ev.statut === "confirme" ? "success" : ev.statut === "annule" ? "default" : "warning"}
                   onClick={() => onSelect(ev.id)}
+                  sx={{ width: '100%', justifyContent: 'flex-start', '& .MuiChip-label': { whiteSpace: 'normal', lineHeight: 1.2, wordBreak: 'break-word' } }}
                 />
               ))}
             </Stack>
@@ -117,6 +125,8 @@ export default function RestoEvenements() {
   const { data } = useEvenements();
   const create = useCreateEvenement();
   const update = useUpdateEvenement();
+  const createFacture = useCreateFacture();
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(data?.[0]?.id ?? null);
   useEffect(() => {
     if (data && !selectedId) setSelectedId(data[0]?.id ?? null);
@@ -169,10 +179,28 @@ export default function RestoEvenements() {
 
   function onSave() {
     if (!selected) return;
+    const wasConfirmed = selected.statut === "confirme";
+    const willBeConfirmed = form.statut === "confirme";
     update.mutate({ id: selected.id, ...form } as any, {
       onSuccess: (ev) => {
         if (ev?.date) setMonthRef(startOfMonth(new Date(ev.date)));
         setSelectedId(ev.id);
+        if (!wasConfirmed && willBeConfirmed) {
+          const qty = Number(form.nb || ev.nb || 1);
+          const RATE_AR = 15000; // tarif par personne (Ar)
+          createFacture.mutate(
+            {
+              date: new Date().toISOString(),
+              clientNom: (form.contact || ev.contact || "Client"),
+              source: "Evenement",
+              lignes: [{ description: `Événement ${form.nom || ev.nom}`, qte: qty, pu: RATE_AR }],
+              statut: "emise",
+            },
+            {
+              onSuccess: (f) => navigate(`/financier?factureId=${f.id}`),
+            },
+          );
+        }
       },
     });
   }

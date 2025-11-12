@@ -12,32 +12,67 @@ import {
   ListItemText,
 } from "@mui/material";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from "recharts";
-import {
-  factures,
-  stockProduits,
-  reservations,
-  chambres,
-  evenements,
-} from "@/services/mock";
+import { chambres } from "@/services/mock";
+import { useFactures, useEvenements, useStockProduits } from "@/services/api";
 import {
   addDays,
   format,
   startOfWeek,
   endOfWeek,
   isSameDay,
-  differenceInCalendarDays,
+  startOfMonth,
 } from "date-fns";
+import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
+import { RoomCalendar } from "@/components/RoomCalendar";
+import { useHebergementReservations } from "@/services/api";
+import { Fragment, useState } from "react";
+import { exportToCSV, exportToPDF } from "@/lib/export";
 
-const revenus = [
-  { name: "Héb.", value: 1200000 },
-  { name: "Resto", value: 2100000 },
-  { name: "Évén.", value: 350000 },
-];
+function formatAr(n: number) {
+  return `${n.toLocaleString("fr-FR")} Ar`;
+}
 
 export default function Dashboard() {
-  const pendingList = factures.filter((f) => f.statut === "emisee");
-  const lowList = stockProduits.filter((p) => p.stock <= p.seuilMin);
+  const { data: reservations } = useHebergementReservations();
+  const { data: factures } = useFactures();
+  const { data: stock } = useStockProduits();
+  const { data: events } = useEvenements();
+  const pendingList = (factures || []).filter((f) => f.statut === "emise");
+  const lowList = (stock || []).filter((p) => p.stock <= p.seuilMin);
+  
+  // État pour le calendrier des chambres
+  const [roomView, setRoomView] = useState<"month" | "week" | "day">("week");
+  const [roomDateRef, setRoomDateRef] = useState<Date>(new Date());
+
+  // Revenus par activité (synchronisés avec Financier)
+  const revenus = (() => {
+    const sum = (src: import("@shared/api").Facture["source"]) =>
+      (factures || [])
+        .filter((f) => f.source === src)
+        .reduce((s, f) => s + f.totalTTC, 0);
+    return [
+      { name: "Héb.", value: sum("Hebergement") },
+      { name: "Resto", value: sum("Restaurant") },
+      { name: "Évén.", value: sum("Evenement") },
+    ];
+  })();
+
+  function handleExportRevenus() {
+    const exportData = revenus.map(r => ({
+      'Activité': r.name,
+      'Revenus (Ar)': r.value.toLocaleString('fr-FR')
+    }));
+    exportToCSV(exportData, 'revenus_par_activite');
+  }
+
+  function handleExportRevenusPDF() {
+    const exportData = revenus.map(r => ({
+      'Activité': r.name,
+      'Revenus': formatAr(r.value)
+    }));
+    exportToPDF('Revenus par activité', exportData, 'revenus_par_activite');
+  }
 
   // Alerts data (stock + housekeeping)
   const chambreAlerts = chambres
@@ -65,16 +100,16 @@ export default function Dashboard() {
         : a.type === "chambre",
   );
 
-  // Week calendar (events)
+  // Week calendar (events) — synchronisés avec page événements
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
-  const weekEvents = (evenements || []).filter((e) => {
+  const weekEvents = (events || []).filter((e) => {
     const d = new Date(e.date + "T00:00:00");
     return d >= weekStart && d <= weekEnd;
   });
   const weekNumber = Number(format(new Date(), "I"));
-  const monthLabel = format(new Date(), "LLLL yyyy");
+  const monthLabel = format(new Date(), "LLLL yyyy", { locale: fr });
 
   return (
     <Box>
@@ -227,7 +262,7 @@ export default function Dashboard() {
                   }}
                 >
                   <Typography variant="caption" color="text.secondary">
-                    {format(d, "EEE d")}
+                    {format(d, "EEE d", { locale: fr })}
                   </Typography>
                   <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                     {weekEvents
@@ -264,10 +299,10 @@ export default function Dashboard() {
               <Typography fontWeight={700}>Revenus par activité</Typography>
               <Stack direction="row" spacing={1}>
                 <Chip size="small" label="Ce mois" color="primary" />
-                <Button size="small" variant="outlined">
+                <Button size="small" variant="outlined" onClick={handleExportRevenusPDF}>
                   PDF
                 </Button>
-                <Button size="small" variant="outlined">
+                <Button size="small" variant="outlined" onClick={handleExportRevenus}>
                   Excel
                 </Button>
               </Stack>
@@ -305,9 +340,14 @@ export default function Dashboard() {
                 >
                   <ListItemText
                     primary={f.clientNom}
-                    secondary={`${format(new Date(f.date), "dd/MM/yyyy")} · ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(f.totalTTC / 100)}`}
+                    secondary={`${format(new Date(f.date), "dd/MM/yyyy", { locale: fr })} · ${formatAr(f.totalTTC)}`}
                   />
-                  <Button size="small" variant="outlined">
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    component={Link}
+                    to={`/financier?factureId=${encodeURIComponent(f.id)}`}
+                  >
                     Ouvrir
                   </Button>
                 </ListItemButton>
@@ -327,18 +367,67 @@ export default function Dashboard() {
             >
               <Typography fontWeight={700}>Occupation chambres</Typography>
               <Stack direction="row" spacing={1}>
-                <Chip size="small" label="Mensuel" variant="outlined" />
-                <Chip size="small" label="Hebdo" color="primary" />
-                <Chip size="small" label="Jour" variant="outlined" />
-                <Chip size="small" label="Aujourd'hui" variant="outlined" />
+                <Chip 
+                  size="small" 
+                  label="Mensuel" 
+                  color={roomView === "month" ? "primary" : "default"}
+                  variant={roomView === "month" ? "filled" : "outlined"}
+                  onClick={() => setRoomView("month")}
+                />
+                <Chip 
+                  size="small" 
+                  label="Hebdo" 
+                  color={roomView === "week" ? "primary" : "default"}
+                  variant={roomView === "week" ? "filled" : "outlined"}
+                  onClick={() => setRoomView("week")}
+                />
+                <Chip 
+                  size="small" 
+                  label="Jour" 
+                  color={roomView === "day" ? "primary" : "default"}
+                  variant={roomView === "day" ? "filled" : "outlined"}
+                  onClick={() => setRoomView("day")}
+                />
+                <Chip 
+                  size="small" 
+                  label="Aujourd'hui" 
+                  variant="outlined"
+                  onClick={() => setRoomDateRef(new Date())}
+                />
+                <Chip 
+                  size="small" 
+                  label="◀" 
+                  onClick={() => setRoomDateRef(d => 
+                    roomView === "month" ? addDays(d, -30) : 
+                    roomView === "week" ? addDays(d, -7) : 
+                    addDays(d, -1)
+                  )}
+                />
+                <Chip 
+                  size="small" 
+                  label="▶" 
+                  onClick={() => setRoomDateRef(d => 
+                    roomView === "month" ? addDays(d, 30) : 
+                    roomView === "week" ? addDays(d, 7) : 
+                    addDays(d, 1)
+                  )}
+                />
               </Stack>
             </Stack>
-            <MiniRoomsCalendar />
+            <Box sx={{ maxHeight: 400, overflowY: 'auto', overflowX: 'hidden' }}>
+              <RoomCalendar 
+                view={roomView}
+                dateRef={roomDateRef}
+                statusFilter="all"
+                reservations={reservations || []}
+                compact={true}
+              />
+            </Box>
             <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-              <LegendDot color="#81C784" label="Libre" />
-              <LegendDot color="#E57373" label="Occupée" />
-              <LegendDot color="#FFD54F" label="En nettoyage" />
-              <LegendDot color="#BDBDBD" label="Hors service" />
+              <LegendDot color="#FFFFFF" label="Libre" />
+              <LegendDot color="#66BB6A" label="Réservée" />
+              <LegendDot color="#EF5350" label="Occupée" />
+              <LegendDot color="#9E9E9E" label="Hors service" />
             </Stack>
           </Paper>
         </Grid>
@@ -410,51 +499,3 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   );
 }
 
-function MiniRoomsCalendar() {
-  const start = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const columns = Array.from({ length: 7 }).map((_, i) => addDays(start, i));
-
-  function cellColor(chambreId: string, d: Date) {
-    const r = reservations.find(
-      (r) => r.type === "hebergement" && r.chambreId === chambreId,
-    );
-    if (!r) return "#81C784"; // Libre
-    const debut = new Date(r.dateDebut || "");
-    const fin = new Date(r.dateFin || r.dateDebut || "");
-    const inside = d >= debut && d < fin;
-    return inside ? "#E57373" : "#81C784";
-  }
-
-  return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: `160px repeat(${columns.length}, 1fr)`,
-        gap: 1,
-      }}
-    >
-      <Box />
-      {columns.map((d) => (
-        <Box
-          key={d.toISOString()}
-          sx={{ textAlign: "center", color: "text.secondary" }}
-        >
-          {format(d, "EEE d")}
-        </Box>
-      ))}
-      {chambres.map((c) => (
-        <Fragment key={c.id}>
-          <Box sx={{ py: 1, fontWeight: 700 }}>{c.numero}</Box>
-          {columns.map((d, idx) => (
-            <Box
-              key={`${c.id}-${idx}`}
-              sx={{ height: 28, bgcolor: cellColor(c.id, d), borderRadius: 1 }}
-            />
-          ))}
-        </Fragment>
-      ))}
-    </Box>
-  );
-}
-
-import { Fragment, useState } from "react";

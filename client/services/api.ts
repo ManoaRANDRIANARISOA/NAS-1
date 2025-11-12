@@ -9,6 +9,8 @@ import {
   tables,
   evenements,
   clients,
+  utilisateurs,
+  userAuth,
 } from "./mock";
 import {
   Commande,
@@ -16,6 +18,7 @@ import {
   Reservation,
   TableResto,
   Evenement,
+  Utilisateur,
 } from "@shared/api";
 
 export const keys = {
@@ -27,6 +30,7 @@ export const keys = {
   menu: ["menu"] as const,
   events: ["events"] as const,
   clients: ["clients"] as const,
+  users: ["users"] as const,
 };
 
 export function useStockProduits() {
@@ -186,6 +190,72 @@ export function useClients() {
   return useQuery({
     queryKey: keys.clients,
     queryFn: async () => clients,
+  });
+}
+
+// ==========================
+// Utilisateurs (mock CRUD)
+// ==========================
+export function useUsers() {
+  return useQuery({
+    queryKey: keys.users,
+    queryFn: async (): Promise<Utilisateur[]> => utilisateurs,
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Omit<Utilisateur, "id"> & { password?: string },
+    ) => {
+      const user: Utilisateur = { id: `u-${Date.now()}`, ...payload };
+      (await import("./mock")).utilisateurs.push(user as any);
+      if (payload.password && payload.login) {
+        (await import("./mock")).userAuth[payload.login] = payload.password;
+      }
+      return user;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      payload: Partial<Utilisateur> & { id: string; password?: string },
+    ) => {
+      const list = (await import("./mock")).utilisateurs as any as Utilisateur[];
+      const i = list.findIndex((u) => u.id === payload.id);
+      if (i >= 0) {
+        const prevLogin = list[i].login;
+        list[i] = { ...list[i], ...payload };
+        if (payload.password) {
+          const loginKey = payload.login ?? prevLogin;
+          (await import("./mock")).userAuth[loginKey] = payload.password;
+        }
+      }
+      return list[i];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const list = (await import("./mock")).utilisateurs as any as Utilisateur[];
+      const i = list.findIndex((u) => u.id === id);
+      if (i >= 0) {
+        const loginKey = list[i].login;
+        list.splice(i, 1);
+        delete (await import("./mock")).userAuth[loginKey];
+      }
+      return true;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
   });
 }
 

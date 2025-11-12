@@ -116,7 +116,7 @@ export interface Facture {
   source: "Hebergement" | "Restaurant" | "Evenement";
   lignes: FactureLigne[];
   totalTTC: number;
-  statut: "emisee" | "payee" | "annulee";
+  statut: "emise" | "payee" | "annulee";
 }
 
 export interface Utilisateur {

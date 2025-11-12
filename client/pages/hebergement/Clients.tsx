@@ -1,15 +1,28 @@
 import { Avatar, Box, Button, Chip, List, ListItemButton, ListItemText, Paper, Stack, TextField, Typography, Grid } from "@mui/material";
-import { clients, reservations } from "@/services/mock";
 import { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useClients, useHebergementReservations } from "@/services/api";
+import { useNavigate } from "react-router-dom";
 
 export default function HebergementClients() {
+  const navigate = useNavigate();
+  const { data: clientsData } = useClients();
+  const { data: reservationsData } = useHebergementReservations();
   const [q, setQ] = useState("");
-  const list = useMemo(() => clients.filter(c => c.nom.toLowerCase().includes(q.toLowerCase())), [q]);
+  const hebergementClientIds = useMemo(() => {
+    const ids = new Set<string>();
+    (reservationsData || [])
+      .filter(r => r.type === 'hebergement')
+      .forEach(r => ids.add(r.clientId));
+    return ids;
+  }, [reservationsData]);
+  const list = useMemo(() => (clientsData || [])
+    .filter(c => hebergementClientIds.has(c.id))
+    .filter(c => c.nom.toLowerCase().includes(q.toLowerCase())), [q, clientsData, hebergementClientIds]);
   const [selectedId, setSelectedId] = useState(list[0]?.id || "");
   const selected = list.find(c=>c.id===selectedId) || null;
-  const history = useMemo(() => reservations.filter(r => r.clientId===selectedId), [selectedId]);
+  const history = useMemo(() => (reservationsData || []).filter(r => r.clientId===selectedId), [selectedId, reservationsData]);
 
   // Form state qui se met à jour dynamiquement
   const [formData, setFormData] = useState({
@@ -20,7 +33,8 @@ export default function HebergementClients() {
     adresse: "",
     pays: "",
     tags: "",
-    reference: ""
+    reference: "",
+    notes: ""
   });
 
   // Mettre à jour le formulaire quand le client sélectionné change
@@ -34,10 +48,27 @@ export default function HebergementClients() {
         adresse: selected.adresse || "",
         pays: selected.pays || "Madagascar",
         tags: selected.tags || "",
-        reference: selected.reference || ""
+        reference: selected.reference || "",
+        notes: ""
       });
     }
   }, [selected]);
+
+  const isDirty = useMemo(() => {
+    if (!selected) return false;
+    const base = {
+      nom: selected.nom || "",
+      type: selected.type || "",
+      email: selected.email || "",
+      telephone: selected.telephone || "",
+      adresse: selected.adresse || "",
+      pays: selected.pays || "Madagascar",
+      tags: selected.tags || "",
+      reference: selected.reference || "",
+      notes: ""
+    };
+    return JSON.stringify(formData) !== JSON.stringify(base);
+  }, [formData, selected]);
 
   return (
     <Box>
@@ -47,7 +78,7 @@ export default function HebergementClients() {
           <TextField size="small" placeholder="Rechercher un client" value={q} onChange={e=>setQ(e.target.value)} fullWidth />
           <List dense>
             {list.map(c=> {
-              const hist = reservations.filter(r=> r.clientId===c.id);
+              const hist = (reservationsData || []).filter(r=> r.clientId===c.id);
               const last = hist[hist.length-1];
               return (
                 <ListItemButton key={c.id} selected={c.id===selectedId} onClick={()=>setSelectedId(c.id)}>
@@ -71,9 +102,32 @@ export default function HebergementClients() {
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography fontWeight={800}>{selected.nom}</Typography>
                 <Stack direction="row" spacing={1}>
-                  <Button variant="outlined">E-mail</Button>
-                  <Button variant="outlined">Appeler</Button>
-                  <Button variant="contained">Nouvelle réservation</Button>
+            {(() => {
+              const email = (formData?.email || "").trim();
+              const isValid = /.+@.+\..+/.test(email);
+              return (
+                <Button
+                  variant="outlined"
+                  component={isValid ? 'a' : undefined}
+                  href={isValid ? `mailto:${email}` : undefined}
+                  disabled={!isValid}
+                >
+                  E-mail
+                </Button>
+              );
+            })()}
+            <Button
+              variant="contained"
+              onClick={() => {
+                if (selectedId) {
+                  navigate(`/hebergement/gestion?newReservation=1&clientId=${encodeURIComponent(selectedId)}`);
+                } else {
+                  navigate(`/hebergement/gestion?newReservation=1`);
+                }
+              }}
+            >
+              Nouvelle réservation
+            </Button>
                 </Stack>
               </Stack>
               <Grid container spacing={2}>
@@ -152,6 +206,16 @@ export default function HebergementClients() {
                   />
                 </Grid>
               </Grid>
+              <TextField 
+                size="small" 
+                label="Préférences / notes" 
+                fullWidth
+                multiline
+                minRows={3}
+                placeholder="Exemples: Préfère chambre calme, allergie aux arachides, arrivée tardive, etc."
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              />
               <Chip 
                 size="small" 
                 label={`Historique: ${history.length} séjour${history.length > 1 ? 's' : ''}`} 
@@ -205,12 +269,12 @@ export default function HebergementClients() {
                     </Box>
                     <Box>
                       <Typography variant="body2">
-                        {format(new Date(h.dateDebut), 'dd MMM yyyy', { locale: fr })}
+                        {format(new Date(h.dateDebut), 'dd MMM yyyy HH:mm', { locale: fr })}
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="body2">
-                        {h.dateFin ? format(new Date(h.dateFin), 'dd MMM yyyy', { locale: fr }) : '-'}
+                        {h.dateFin ? format(new Date(h.dateFin), 'dd MMM yyyy HH:mm', { locale: fr }) : '-'}
                       </Typography>
                     </Box>
                     <Box>
@@ -224,9 +288,8 @@ export default function HebergementClients() {
                 ))}
               </Box>
               <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                <Button variant="contained">Sauvegarder</Button>
-                <Button variant="outlined">Voir les factures</Button>
-                <Button variant="outlined">Supprimer</Button>
+                {isDirty && <Button variant="contained" onClick={()=> console.log('save client (mock)', formData)}>Sauvegarder</Button>}
+                <Button variant="outlined" onClick={()=> navigate(`/financier?clientId=${encodeURIComponent(selectedId)}`)}>Voir les factures</Button>
               </Stack>
             </Stack>
           )}

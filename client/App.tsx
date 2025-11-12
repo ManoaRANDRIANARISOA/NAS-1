@@ -23,6 +23,7 @@ import HebergementTarifs from "@/pages/hebergement/Tarifs";
 import Financier from "@/pages/Financier";
 import AdminPage from "@/pages/Admin";
 import RestoStock from "@/pages/restaurant/Stock";
+import RouteGuard from "@/components/RouteGuard";
 
 const queryClient = new QueryClient();
 
@@ -42,25 +43,86 @@ function AuthenticatedApp() {
 
               <Route
                 path="/hebergement/gestion"
-                element={<GestionChambres />}
+                element={
+                  <RouteGuard allowed={["admin","reception","economat","direction"]}>
+                    <GestionChambres />
+                  </RouteGuard>
+                }
               />
               <Route
                 path="/hebergement/clients"
-                element={<HebergementClients />}
+                element={
+                  <RouteGuard allowed={["admin","reception","economat","direction"]}>
+                    <HebergementClients />
+                  </RouteGuard>
+                }
               />
-              <Route path="/hebergement/stock" element={<HebergementStock />} />
+              <Route
+                path="/hebergement/stock"
+                element={
+                  <RouteGuard allowed={["admin","economat","direction"]}>
+                    <HebergementStock />
+                  </RouteGuard>
+                }
+              />
               <Route
                 path="/hebergement/tarifs"
-                element={<HebergementTarifs />}
+                element={
+                  <RouteGuard allowed={["admin","direction"]}>
+                    <HebergementTarifs />
+                  </RouteGuard>
+                }
               />
 
-              <Route path="/resto/plan" element={<RestoPlan />} />
-              <Route path="/resto/menu" element={<RestoMenu />} />
-              <Route path="/resto/stock" element={<RestoStock />} />
-              <Route path="/resto/evenements" element={<RestoEvenements />} />
+              <Route
+                path="/resto/plan"
+                element={
+                  <RouteGuard allowed={["admin","reception","chef_salle","serveur","cuisine","bar","comptoir","direction"]}>
+                    <RestoPlan />
+                  </RouteGuard>
+                }
+              />
+              <Route
+                path="/resto/menu"
+                element={
+                  <RouteGuard allowed={["admin","chef_salle","serveur","cuisine","bar","comptoir","direction"]}>
+                    <RestoMenu />
+                  </RouteGuard>
+                }
+              />
+              <Route
+                path="/resto/stock"
+                element={
+                  <RouteGuard allowed={["admin","comptoir","direction"]}>
+                    <RestoStock />
+                  </RouteGuard>
+                }
+              />
+              <Route
+                path="/resto/evenements"
+                element={
+                  <RouteGuard allowed={["admin","chef_salle","serveur","cuisine","bar","comptoir","direction"]}>
+                    <RestoEvenements />
+                  </RouteGuard>
+                }
+              />
 
-              <Route path="/financier" element={<Financier />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route
+                path="/financier"
+                element={
+                  <RouteGuard allowed={["admin","comptable","comptoir","direction","reception"]}>
+                    <Financier />
+                  </RouteGuard>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RouteGuard allowed={["admin"]}>
+                    <AdminPage />
+                  </RouteGuard>
+                }
+              />
               <Route
                 path="/parametres"
                 element={<Placeholder title="Paramètres" />}

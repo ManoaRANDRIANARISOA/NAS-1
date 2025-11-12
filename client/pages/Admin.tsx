@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/services/api";
 
 type User = {
   id: string;
@@ -38,44 +39,7 @@ type Role = {
   rapports: "Total" | "Lecture" | "Aucun";
 };
 
-const initialUsers: User[] = [
-  {
-    id: "u1",
-    nom: "Rina Andriamalala",
-    email: "rina@example.com",
-    role: "Admin",
-    canal: "Tous",
-    derniere: "il y a 5 min",
-    statut: "Actif",
-  },
-  {
-    id: "u2",
-    nom: "Hery Rakoto",
-    email: "hery@example.com",
-    role: "Manager",
-    canal: "Hébergement",
-    derniere: "il y a 2 h",
-    statut: "Invité",
-  },
-  {
-    id: "u3",
-    nom: "Sariaka Ranaivo",
-    email: "sariaka@example.com",
-    role: "Serveur",
-    canal: "Restaurant",
-    derniere: "il y a 6 h",
-    statut: "Actif",
-  },
-  {
-    id: "u4",
-    nom: "Zoé Randria",
-    email: "zoe@example.com",
-    role: "Réception",
-    canal: "Hébergement",
-    derniere: "",
-    statut: "Suspendu",
-  },
-];
+// Les utilisateurs sont désormais gérés via le store mock (useUsers)
 
 const initialRoles: Omit<Role, "utilisateurs">[] = [
   {
@@ -117,7 +81,37 @@ const initialRoles: Omit<Role, "utilisateurs">[] = [
 ];
 
 export default function AdminPage() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const { data: usersData } = useUsers();
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const deleteUserMutation = useDeleteUser();
+  const users: User[] = useMemo(() => {
+    // Adapter Utilisateur -> User (email = login, rôle affiché en libellé)
+    const toLabel = (r: string) => {
+      const map: Record<string, string> = {
+        admin: "Admin",
+        reception: "Réception",
+        chef_salle: "Chef de salle",
+        serveur: "Serveur",
+        cuisine: "Cuisine",
+        bar: "Bar",
+        comptoir: "Comptoir",
+        economat: "Économat",
+        comptable: "Comptable",
+        direction: "Direction",
+      };
+      return map[r] || r;
+    };
+    return (usersData || []).map((u) => ({
+      id: u.id,
+      nom: u.nom,
+      email: u.login,
+      role: toLabel(u.role),
+      canal: "Tous",
+      derniere: "",
+      statut: "Actif",
+    }));
+  }, [usersData]);
   const [roles, setRoles] = useState<Omit<Role, "utilisateurs">[]>(initialRoles);
   
   // Filtres
@@ -137,6 +131,7 @@ export default function AdminPage() {
     derniere: "",
     statut: "Actif",
   });
+  const [password, setPassword] = useState<string>("");
 
   // Filtrage des utilisateurs
   const filteredUsers = useMemo(() => {
@@ -188,31 +183,49 @@ export default function AdminPage() {
 
   // Sauvegarder les modifications ou créer un nouvel utilisateur
   function saveUser() {
-    if (isCreating) {
-      // Créer un nouvel utilisateur
-      const newUser: User = {
-        ...userForm,
-        id: `u${Date.now()}`,
-        derniere: "",
+    const roleKey = (() => {
+      const map: Record<string, string> = {
+        Admin: "admin",
+        "Réception": "reception",
+        "Chef de salle": "chef_salle",
+        Serveur: "serveur",
+        Cuisine: "cuisine",
+        Bar: "bar",
+        Comptoir: "comptoir",
+        Économat: "economat",
+        Comptable: "comptable",
+        Direction: "direction",
+        Manager: "direction", // fallback
       };
-      setUsers((prev) => [...prev, newUser]);
+      return map[userForm.role] || userForm.role;
+    })();
+
+    if (isCreating) {
+      createUser.mutate({ nom: userForm.nom, login: userForm.email, role: roleKey as any, password }, {
+        onSuccess: () => {
+          setModalOpen(false);
+          setEditingUser(null);
+          setIsCreating(false);
+          setPassword("");
+        },
+      });
     } else {
-      // Modifier un utilisateur existant
       if (!editingUser) return;
-      setUsers((prev) =>
-        prev.map((u) => (u.id === editingUser.id ? { ...userForm } : u))
-      );
+      updateUser.mutate({ id: editingUser.id, nom: userForm.nom, login: userForm.email, role: roleKey as any, password }, {
+        onSuccess: () => {
+          setModalOpen(false);
+          setEditingUser(null);
+          setIsCreating(false);
+          setPassword("");
+        },
+      });
     }
-    
-    setModalOpen(false);
-    setEditingUser(null);
-    setIsCreating(false);
   }
 
   // Supprimer un utilisateur
   function deleteUser(userId: string) {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      deleteUserMutation.mutate({ id: userId });
     }
   }
 
@@ -524,6 +537,13 @@ export default function AdminPage() {
               fullWidth
             />
             <TextField
+              label="Mot de passe"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+            />
+            <TextField
               label="Rôle"
               select
               value={userForm.role}
@@ -536,6 +556,11 @@ export default function AdminPage() {
               <MenuItem value="Manager">Manager</MenuItem>
               <MenuItem value="Serveur">Serveur</MenuItem>
               <MenuItem value="Réception">Réception</MenuItem>
+              <MenuItem value="Chef de salle">Chef de salle</MenuItem>
+              <MenuItem value="Comptoir">Comptoir</MenuItem>
+              <MenuItem value="Économat">Économat</MenuItem>
+              <MenuItem value="Comptable">Comptable</MenuItem>
+              <MenuItem value="Direction">Direction</MenuItem>
             </TextField>
             <TextField
               label="Canal"

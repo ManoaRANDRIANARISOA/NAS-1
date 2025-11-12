@@ -31,8 +31,11 @@ import {
   useCreateMenuItem,
   useMenuItems,
   useUpdateMenuItem,
+  useCreateFacture,
 } from "@/services/api";
 import { MenuItem as Item } from "@shared/api";
+import { exportToPDF } from "@/lib/export";
+import { useNavigate } from "react-router-dom";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   plats: <RestaurantIcon fontSize="small" />,
@@ -227,6 +230,8 @@ export default function RestoMenu() {
   const { data } = useMenuItems();
   const update = useUpdateMenuItem();
   const create = useCreateMenuItem();
+  const createFacture = useCreateFacture();
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(
     data?.[0]?.id ?? null,
   );
@@ -280,6 +285,39 @@ export default function RestoMenu() {
     );
   }
   const total = cart.reduce((a, b) => a + b.prix * b.qte, 0);
+  const [billClient, setBillClient] = useState<string>("Client comptoir");
+
+  function handlePrint() {
+    const rows = cart.map((c) => ({
+      Article: c.nom,
+      Quantité: c.qte,
+      "Prix unitaire (Ar)": c.prix.toLocaleString(),
+      Total: (c.prix * c.qte).toLocaleString() + " Ar",
+    }));
+    exportToPDF("Commande restaurant", rows as any[], "commande");
+  }
+
+  function handleGenerateInvoice() {
+    if (cart.length === 0) {
+      alert("Le panier est vide");
+      return;
+    }
+    createFacture.mutate(
+      {
+        date: new Date().toISOString(),
+        clientNom: billClient || "Client comptoir",
+        source: "Restaurant",
+        lignes: cart.map((c) => ({ description: c.nom, qte: c.qte, pu: c.prix })),
+        statut: "emise",
+      },
+      {
+        onSuccess: (f) => {
+          setCart([]);
+          navigate(`/financier?factureId=${f.id}`);
+        },
+      },
+    );
+  }
 
   const [openNew, setOpenNew] = useState(false);
   const [newForm, setNewForm] = useState({
@@ -424,9 +462,20 @@ export default function RestoMenu() {
                 {total.toLocaleString()} Ar
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1}>
-              <Button variant="outlined">Imprimer</Button>
-              <Button variant="contained">Générer la facture</Button>
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              <TextField
+                size="small"
+                label="Client"
+                placeholder="Nom du client"
+                value={billClient}
+                onChange={(e) => setBillClient(e.target.value)}
+              />
+              <Stack direction="row" spacing={1}>
+                <Button variant="outlined" onClick={handlePrint}>Imprimer</Button>
+                <Button variant="contained" onClick={handleGenerateInvoice} disabled={createFacture.isPending}>
+                  Générer la facture
+                </Button>
+              </Stack>
             </Stack>
           </Paper>
         </Grid>

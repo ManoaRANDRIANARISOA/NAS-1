@@ -35,7 +35,6 @@ export const useRBAC = () => {
     const rapports = [{ label: "Rapports", path: "/rapports" }];
     const admin = [
       { label: "Gestion / Admin", path: "/admin" },
-      { label: "Paramètres", path: "/parametres" },
     ];
 
     const map: Record<
